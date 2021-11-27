@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+    integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css">
+  <link rel="shortcut icon" href="favicon.png" type="image/x-icon" />
+  <title>Putar Lagu</title>
+  <style>
+    btn:focus,
+    a:focus,
+    input:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    .input-url {
+      border: 2px solid #555;
+    }
+
+    h3.title {
+      font-size: 1rem;
+      margin: 0;
+      overflow-y: hidden;
+      max-height: 3rem;
+      line-height: 1.4rem;
+    }
+
+    .queue-list {
+      max-height: calc(100vh - 50px);
+      overflow-y: auto;
+    }
+
+    .history-list {
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .history-video {
+      width: 100px;
+      display: inline-block;
+      cursor: pointer;
+    }
+
+    .history-list h3.title {
+      font-size: .8rem;
+      line-height: 1rem;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    .history-list .author {
+      font-size: .6rem;
+      line-height: .8rem;
+      vertical-align: top;
+    }
+
+    .meta-video:hover {
+      background: #e2e2e2;
+      cursor: pointer;
+    }
+
+    .video-thumb {
+      max-height: 400px;
+      object-fit: cover;
+    }
+
+    .now-playing {
+      position: relative;
+    }
+
+    .now-playing .playing-info {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      width: 100%;
+      padding: 1rem;
+      color: white;
+      z-index: 2;
+    }
+
+    .now-playing .state {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 1rem;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      font-weight: bold;
+      border-radius: 10px;
+      z-index: 2;
+    }
+
+    .now-playing .animate {
+      background-color: #000;
+      background-image: url(spectrum.gif);
+      background-repeat: no-repeat;
+      background-size: contain;
+      background-position: center;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      opacity: .5;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app" class="wrapper container-fluid" v-cloak>
+    <div class="row">
+      <div class="col-md-7">
+        <h1>Putar Lagu</h1>
+        <div class="add-queue">
+          <div class="input-group mb-3">
+            <input type="url" id="url" value="" autocomplete="off" class="form-control input-url"
+              placeholder="Url Youtube" aria-label="Url Youtube" aria-describedby="basic-addon2">
+            <div class="input-group-append">
+              <button class="btn btn-dark" type="button" onclick="addQueue()">Add Queue</button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!currentPlaying || !state" class="d-flex flex-row align-items-center now-playing my-3">
+          <img src="waiting.gif" width="50%" />
+          <h3>Waiting...</h3>
+        </div>
+        <div v-if="currentPlaying && state" class="d-flex flex-column now-playing my-3">
+          <div class="animate"></div>
+          <div class="state">
+            <i class="text-danger fas fa-play"></i>
+            Now Playing
+          </div>
+          <img :src="currentPlaying.thumbnailVideo" class="img-fluid video-thumb" />
+          <div class="playing-info">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="flex-grow-1">
+                <h3>{{currentPlaying.title}}</h3>
+                <span>{{currentPlaying.author}}</span>
+              </div>
+              <div class="d-flex flex-column align-items-center" style="min-width: 100px">
+                <div v-if="state" class="text-center mb-2">
+                  {{state.text}}
+                </div>
+                <div class="control d-flex flex-row justify-content-between align-content-center">
+                  <button v-if="queueList.length > 0" onclick="skip()" class="btn btn-sm btn-danger">Skip</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="historyList.length > 0">
+          <h2>History</h2>
+          <div class="history-list">
+            <a v-for="history in historyList" :key="history.idVideo" class="history-video mr-2"
+              v-on:click="addQueueVue(history)">
+              <img :src="history.thumbnailVideo" class="meta-video-thumb img-fluid" />
+              <div class="history-video-detail">
+                <h3 class="title">{{ history.title }}</h3>
+                <span class="author">{{ history.author }}</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+      </div>
+      <div class="col-md-5">
+        <div class="d-flex justify-content-between">
+          <h2 class="flex-grow-1">Queue</h2>
+          <button onclick="getQueue()" class="btn btn-link text-dark"><i class="fas fa-sync"></i></button>
+        </div>
+        <div v-if="queueList.length < 1">
+          <div class="d-flex align-items-center justify-content-center" style="height: 80vh;">
+            Waiting...
+          </div>
+        </div>
+        <div v-if="queueList.length > 0" class="queue-list">
+          <a v-for="queue in queueList" :key="queue.idVideo" v-on:click="removeQueueVue(queue)">
+            <div class="d-flex align-items-start meta-video mb-2">
+              <img :src="queue.thumbnailVideo" width="100" class="meta-video-thumb mr-2" />
+              <div class="meta-video-detail">
+                <h3 class="title">{{ queue.title }}</h3>
+                <span class="author">{{ queue.author }}</span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Optional JavaScript -->
+  <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous">
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous">
+  </script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous">
+  </script>
+  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
+    integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous">
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+  <script>
+    var app = new Vue({
+      el: '#app',
+      data: {
+        currentPlaying: null,
+        queueList: [],
+        historyList: [],
+        state: null
+      },
+      methods: {
+        addQueueVue(queue) {
+          addQueueByData(queue);
+        },
+        removeQueueVue(queue) {
+          removeQueue(queue);
+        }
+      }
+    })
+    const socket = io('https://socket.yuk.party');
+    socket.on('connect', function () {
+      console.log('Connected');
+      getQueue();
+      getHistory();
+      getCurrentPlaying();
+    });
+
+    socket.on('putarlagu_queueList', function (data) {
+      app.queueList = data;
+      console.log('queueList', data);
+      getHistory();
+    });
+
+    socket.on('putarlagu_historyList', function (data) {
+      app.historyList = data;
+      console.log('history', data);
+    });
+
+    socket.on('putarlagu_updateState', function (data) {
+      app.state = data;
+    });
+
+
+    socket.on('putarlagu_currentPlaying', function (data) {
+      app.currentPlaying = data;
+      if (!data && app.queueList.length > 0) {
+        play();
+      }
+      console.log('current', data);
+    });
+
+    var inputUrl = document.getElementById("url");
+    inputUrl.addEventListener("keyup", function (event) {
+      if (event.keyCode === 13) {
+        event.preventDefault();
+        addQueue();
+      }
+    });
+
+    function validURL(url) {
+      var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+      var match = url.match(regExp);
+      return (match) ? true : false;
+    }
+
+    function addQueue() {
+      if (validURL(document.getElementById("url").value)) {
+        var urlVideo = document.getElementById("url").value;
+        socket.emit('putarlagu_addQueue', {
+          urlVideo
+        });
+        document.getElementById("url").value = "";
+      }
+    }
+
+    function addQueueByData(data) {
+      if (data) {
+        socket.emit('putarlagu_addQueue', data);
+      }
+    }
+
+    function removeQueue(data) {
+      if (data) {
+        socket.emit('putarlagu_removeQueue', data);
+      }
+    }
+
+    function getQueue() {
+      socket.emit('putarlagu_queueList', {});
+    }
+
+    function getHistory() {
+      socket.emit('putarlagu_historyList', {});
+    }
+
+    function getCurrentPlaying() {
+      socket.emit('putarlagu_currentPlaying');
+    }
+
+    function stop() {
+      socket.emit('putarlagu_stop');
+    }
+
+    function play() {
+      socket.emit('putarlagu_play');
+    }
+
+    function skip() {
+      socket.emit('putarlagu_skip');
+    }
+  </script>
+</body>
+
+</html>
