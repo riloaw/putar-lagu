@@ -111,6 +111,82 @@
       z-index: 1;
       opacity: .5;
     }
+
+    .skip-by {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+    }
+
+    #snackbar {
+      visibility: hidden;
+      min-width: 250px;
+      margin-left: -125px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 2px;
+      padding: 16px;
+      position: fixed;
+      z-index: 1;
+      left: 50%;
+      bottom: 30px;
+      font-size: 17px;
+    }
+
+    #snackbar.show {
+      visibility: visible;
+      -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+      animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    }
+
+    @-webkit-keyframes fadein {
+      from {
+        bottom: 0;
+        opacity: 0;
+      }
+
+      to {
+        bottom: 30px;
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadein {
+      from {
+        bottom: 0;
+        opacity: 0;
+      }
+
+      to {
+        bottom: 30px;
+        opacity: 1;
+      }
+    }
+
+    @-webkit-keyframes fadeout {
+      from {
+        bottom: 30px;
+        opacity: 1;
+      }
+
+      to {
+        bottom: 0;
+        opacity: 0;
+      }
+    }
+
+    @keyframes fadeout {
+      from {
+        bottom: 30px;
+        opacity: 1;
+      }
+
+      to {
+        bottom: 0;
+        opacity: 0;
+      }
+    }
   </style>
 </head>
 
@@ -151,7 +227,7 @@
                   {{state.text}}
                 </div>
                 <div class="control d-flex flex-row justify-content-between align-content-center">
-                  <!-- <button v-if="queueList.length > 0" onclick="skip()" class="btn btn-sm btn-danger">Skip</button> -->
+                  <button v-if="queueList.length > 0" onclick="skip()" class="btn btn-sm btn-danger">Skip</button>
                 </div>
               </div>
             </div>
@@ -161,13 +237,14 @@
         <div v-if="historyList.length > 0">
           <h2>History</h2>
           <div class="history-list">
-            <a v-for="history in historyList" :key="history.idVideo" class="history-video mr-2"
+            <a v-for="history in historyList" :key="history.idVideo" class="history-video mr-2 position-relative"
               v-on:click="addQueueVue(history)">
               <img :src="history.thumbnailVideo" class="meta-video-thumb img-fluid" />
               <div class="history-video-detail">
                 <h3 class="title">{{ history.title }}</h3>
                 <span class="author">{{ history.author }}</span>
               </div>
+              <span v-if="history.skipBy" class="badge badge-danger skip-by"><i class="fa fa-ban"></i> {{history.skipBy}}</span>
             </a>
           </div>
         </div>
@@ -187,16 +264,29 @@
           <a v-for="queue in queueList" :key="queue.idVideo" v-on:click="removeQueueVue(queue)">
             <div class="d-flex align-items-start meta-video mb-2">
               <img :src="queue.thumbnailVideo" width="100" class="meta-video-thumb mr-2" />
-              <div class="meta-video-detail">
+              <div class="meta-video-detail w-100">
                 <h3 class="title">{{ queue.title }}</h3>
-                <span class="author">{{ queue.author }}</span>
+                <div class="d-flex flex-row justify-content-between align-items-center">
+                  <span class="author">{{ queue.author }}</span>
+                  <span class="badge badge-primary mx-2"><i class="fa fa-plus" aria-hidden="true"></i> {{queue.addedBy}}</span>
+                </div>
+                
               </div>
             </div>
           </a>
         </div>
       </div>
     </div>
+    <div v-if="users.length > 0" class="users-list my-3">
+      Online  
+      <a v-for="user in users" :key="user.id" class="badge badge-warning mr-2">
+        <i class="fa fa-user"></i> 
+        {{user.name}}
+      </a>
+    </div>
   </div>
+
+  <div id="snackbar">Notification</div>
 
 
   <!-- Optional JavaScript -->
@@ -215,12 +305,18 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
   <script>
+    const storage = window.localStorage;
+    const socket = io('https://socket.yuk.party');
+    //const socket = io('localhost:3000');
+    const sessionName = 'putarlagu_session';
+
     var app = new Vue({
       el: '#app',
       data: {
         currentPlaying: null,
         queueList: [],
         historyList: [],
+        users: [],
         state: null
       },
       methods: {
@@ -232,25 +328,36 @@
         }
       }
     })
-    const socket = io('https://socket.yuk.party');
+
     socket.on('connect', function () {
       console.log('Connected');
       getQueue();
       getHistory();
       getCurrentPlaying();
+      login();
+      getUsers();
     });
 
     socket.on('putarlagu_queueList', function (data) {
       app.queueList = data;
-      console.log('queueList', data);
       getHistory();
+    });
+
+    socket.on('putarlagu_users', function (data) {
+      app.users = data;
     });
 
     socket.on('putarlagu_historyList', function (data) {
       app.historyList = data;
-      console.log('history', data);
     });
 
+    socket.on('putarlagu_notification', function (data) {
+      showNotification(data);
+    });
+    
+    function sendnotif() {
+      socket.emit('putarlagu_notification', 'hehehehe');
+    }
     socket.on('putarlagu_updateState', function (data) {
       app.state = data;
     });
@@ -261,7 +368,6 @@
       if (!data && app.queueList.length > 0) {
         play();
       }
-      console.log('current', data);
     });
 
     var inputUrl = document.getElementById("url");
@@ -308,6 +414,10 @@
       socket.emit('putarlagu_historyList', {});
     }
 
+    function getUsers() {
+      socket.emit('putarlagu_users');
+    }
+
     function getCurrentPlaying() {
       socket.emit('putarlagu_currentPlaying');
     }
@@ -321,7 +431,161 @@
     }
 
     function skip() {
-      socket.emit('putarlagu_skip');
+      var r = confirm("Are you sure to skip this song : " + app.currentPlaying.title);
+      if (r == true) {
+        socket.emit('putarlagu_skip');
+        var audio = new Audio('notif.wav');
+        audio.play();
+      }
+    }
+
+    async function login(forceUpdateName = false) {
+      const fpPromise = import('https://openfpcdn.io/fingerprintjs/v3')
+        .then(FingerprintJS => FingerprintJS.load())
+      fpPromise
+        .then(fp => fp.get())
+        .then(async result => {
+          // This is the visitor identifier:
+          const visitorID = result.visitorId
+
+          let session = await window.localStorage.getItem(sessionName);
+          let updateSession = session ? JSON.parse(session) : {};
+          updateSession.visitorID = visitorID;
+          if (!updateSession.name || forceUpdateName) {
+            var name = prompt("Please enter your name", generateName());
+            updateSession.name = name;
+          }
+          if (!updateSession.name) {
+            window.location.reload();
+          }
+          await window.localStorage.setItem(sessionName, JSON.stringify(updateSession));
+          socket.emit('putarlagu_login', updateSession);
+         if (forceUpdateName) {
+           window.location.reload();
+         }
+        });
+    }
+
+    function showNotification(msg) {
+      var x = document.getElementById("snackbar");
+      x.innerHTML = msg;
+      x.className = "show";
+      setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+    }
+
+    function capFirst(string) {
+      return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min)) + min;
+    }
+
+    function generateName() {
+      var catsName = [
+        "Abby",
+        "Angel",
+        "Annie",
+        "Baby",
+        "Bailey",
+        "Bandit",
+        "Bear",
+        "Bella",
+        "Bob",
+        "Boo",
+        "Boots",
+        "Bubba",
+        "Buddy",
+        "Buster",
+        "Cali",
+        "Callie",
+        "Casper",
+        "Charlie",
+        "Chester",
+        "Chloe",
+        "Cleo",
+        "Coco",
+        "Cookie",
+        "Cuddles",
+        "Daisy",
+        "Dusty",
+        "Felix",
+        "Fluffy",
+        "Garfield",
+        "George",
+        "Ginger",
+        "Gizmo",
+        "Gracie",
+        "Harley",
+        "Jack",
+        "Jasmine",
+        "Jasper",
+        "Kiki",
+        "Kitty",
+        "Leo",
+        "Lilly",
+        "Lily",
+        "Loki",
+        "Lola",
+        "Lucky",
+        "Lucy",
+        "Luna",
+        "Maggie",
+        "Max",
+        "Mia",
+        "Midnight",
+        "Milo",
+        "Mimi",
+        "Miss kitty",
+        "Missy",
+        "Misty",
+        "Mittens",
+        "Molly",
+        "Muffin",
+        "Nala",
+        "Oliver",
+        "Oreo",
+        "Oscar",
+        "Patches",
+        "Peanut",
+        "Pepper",
+        "Precious",
+        "Princess",
+        "Pumpkin",
+        "Rascal",
+        "Rocky",
+        "Sadie",
+        "Salem",
+        "Sam",
+        "Samantha",
+        "Sammy",
+        "Sasha",
+        "Sassy",
+        "Scooter",
+        "Shadow",
+        "Sheba",
+        "Simba",
+        "Simon",
+        "Smokey",
+        "Snickers",
+        "Snowball",
+        "Snuggles",
+        "Socks",
+        "Sophie",
+        "Spooky",
+        "Sugar",
+        "Tiger",
+        "Tigger",
+        "Tinkerbell",
+        "Toby",
+        "Trouble",
+        "Whiskers",
+        "Willow",
+        "Zoe",
+        "Zoey"
+      ];
+      var name = capFirst(catsName[getRandomInt(0, catsName.length + 1)]);
+      return name;
     }
   </script>
 </body>
