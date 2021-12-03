@@ -187,6 +187,25 @@
         opacity: 0;
       }
     }
+    .add-queue {
+      position: relative;
+    }
+    .search-list {
+        position: absolute;
+        max-height: 300px;
+        width: 100%;
+        border: 2px solid #999;
+        background: #FFF;
+        z-index: 1;
+        margin-top: -10px;
+        overflow-y: auto;
+    }
+    .search-result {
+      cursor: pointer;
+    }
+    .search-result:hover {
+      background-color: #eee;
+    }
   </style>
 </head>
 
@@ -197,10 +216,22 @@
         <h1>Putar Lagu</h1>
         <div class="add-queue">
           <div class="input-group mb-3">
-            <input type="url" id="url" value="" autocomplete="off" class="form-control input-url"
+            <input type="url" id="url" value="" v-model="searchValue" @focus="onFocus = true" @blur="falseDelay()" autocomplete="off" class="form-control input-url"
               placeholder="Url Youtube" aria-label="Url Youtube" aria-describedby="basic-addon2">
             <div class="input-group-append">
-              <button class="btn btn-dark" type="button" onclick="addQueue()">Add Queue</button>
+              <button class="btn btn-dark" type="button" onclick="addQueue()" id="btnAddQueue">Add Queue</button>
+            </div>
+          </div>
+          <div v-if="searchResults.length > 0 && onFocus" class="search-list">
+            <div v-for="search in searchResults" :key="search.id" class="d-flex flex-row mb-1 search-result" v-on:click="addQueueSearch(search)">
+              <img :src="search.snippet.thumbnails.default.url" width="100" class="meta-video-thumb mr-2" />
+              <div class="meta-video-detail w-100">
+                <h3 class="title">{{ search.title }}</h3>
+                <div class="d-flex flex-row align-items-center">
+                  <span class="badge badge-dark mr-2">{{ search.duration_raw }}</span>
+                  <span class="badge badge-secondary">{{ search.snippet.publishedAt }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -313,9 +344,12 @@
     var app = new Vue({
       el: '#app',
       data: {
+        searchValue: '',
+        onFocus: false,
         currentPlaying: null,
         queueList: [],
         historyList: [],
+        searchResults: [],
         users: [],
         state: null
       },
@@ -323,8 +357,25 @@
         addQueueVue(queue) {
           addQueueByData(queue);
         },
+        addQueueSearch(search) {
+          const queue = {
+            idVideo: search.id.videoId,
+            urlVideo: search.url,
+            title: search.title
+          }
+          this.searchValue = '';
+          addQueueByData(queue);
+        },
         removeQueueVue(queue) {
           //removeQueue(queue);
+        },
+        falseDelay() {
+          setTimeout(() => {
+            if (this.searchValue == '') {
+              this.searchResults = [];
+            }
+            this.onFocus = false;
+          }, 500);
         }
       }
     })
@@ -345,6 +396,10 @@
 
     socket.on('putarlagu_users', function (data) {
       app.users = data;
+    });
+
+    socket.on('putarlagu_search', function (data) {
+      app.searchResults = data;
     });
 
     socket.on('putarlagu_historyList', function (data) {
@@ -371,11 +426,29 @@
     });
 
     var inputUrl = document.getElementById("url");
+    var btnAddQueue = document.getElementById("btnAddQueue");
+    var delayTimer;
     inputUrl.addEventListener("keyup", function (event) {
+      btnAddQueue.innerHTML = "Loading...";
+      clearTimeout(delayTimer);
       if (event.keyCode === 13) {
         event.preventDefault();
         addQueue();
       }
+
+      delayTimer = setTimeout(function() {
+        var inputVal = document.getElementById("url").value;
+        if (!inputVal.includes('http') && inputVal.length > 3) {
+          search(inputVal);
+        } else {
+          app.searchResults = [];
+        }
+        if (inputVal.length < 1) {
+          app.searchResults = [];
+        }
+        btnAddQueue.innerHTML = "Add Queue";
+      }, 500);
+      
     });
 
     function validURL(url) {
@@ -428,6 +501,10 @@
 
     function play() {
       socket.emit('putarlagu_play');
+    }
+
+    function search(q) {
+      socket.emit('putarlagu_search', q);
     }
 
     function skip() {
