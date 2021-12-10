@@ -212,7 +212,7 @@
 <body>
   <div id="app" class="wrapper container-fluid" v-cloak>
     <div class="row">
-      <div class="col-md-7">
+      <div class="col-md-4">
         <h1>Putar Lagu</h1>
         <div class="add-queue">
           <div class="input-group mb-3">
@@ -264,24 +264,39 @@
             </div>
           </div>
         </div>
-
-        <div v-if="historyList.length > 0">
-          <h2>History</h2>
-          <div class="history-list">
-            <a v-for="history in historyList" :key="history.idVideo" class="history-video mr-2 position-relative"
-              v-on:click="addQueueVue(history)">
-              <img :src="history.thumbnailVideo" class="meta-video-thumb img-fluid" />
-              <div class="history-video-detail">
-                <h3 class="title">{{ history.title }}</h3>
-                <span class="author">{{ history.author }}</span>
-              </div>
-              <span v-if="history.skipBy" class="badge badge-danger skip-by"><i class="fa fa-ban"></i> {{history.skipBy}}</span>
-            </a>
+        <div v-if="users.length > 0" class="users-list my-3">
+          Online <br/> 
+          <a v-for="user in users" :key="user.id" class="badge badge-warning mr-2">
+            <i class="fa fa-user"></i> 
+            {{user.name}}
+          </a>
+        </div>
+      </div>
+      <div class="col-md-4 mt-2">
+        <div class="d-flex justify-content-between">
+          <h2 class="flex-grow-1">History</h2>
+        </div>
+        <div v-if="historyList.length < 1">
+          <div class="d-flex align-items-center justify-content-center" style="height: 80vh;">
+            No History
           </div>
         </div>
-
+        <div v-if="historyList.length > 0" class="queue-list">
+          <a v-for="history in historyList" :key="history.idVideo" v-on:click="addQueueVue(history)">
+            <div class="d-flex align-items-start meta-video mb-2">
+              <img :src="history.thumbnailVideo" width="100" class="meta-video-thumb mr-2" />
+              <div class="meta-video-detail w-100">
+                <h3 class="title">{{ history.title }}</h3>
+                <div class="d-flex flex-row justify-content-between align-items-center">
+                  <span class="author">{{ history.author }}</span>
+                  <span v-if="history.skipBy" class="badge badge-danger mx-2"><i class="fa fa-ban"></i> {{history.skipBy}}</span>
+                </div>
+              </div>
+            </div>
+          </a>
+        </div>
       </div>
-      <div class="col-md-5">
+      <div class="col-md-4 mt-2">
         <div class="d-flex justify-content-between">
           <h2 class="flex-grow-1">Queue</h2>
           <button onclick="getQueue()" class="btn btn-link text-dark"><i class="fas fa-sync"></i></button>
@@ -308,17 +323,9 @@
         </div>
       </div>
     </div>
-    <div v-if="users.length > 0" class="users-list my-3">
-      Online  
-      <a v-for="user in users" :key="user.id" class="badge badge-warning mr-2">
-        <i class="fa fa-user"></i> 
-        {{user.name}}
-      </a>
-    </div>
   </div>
 
   <div id="snackbar">Notification</div>
-
 
   <!-- Optional JavaScript -->
   <!-- jQuery first, then Popper.js, then Bootstrap JS -->
