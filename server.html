@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+    integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <link rel="shortcut icon" href="favicon.png" type="image/x-icon" />
+  <title>Putar Lagu (Server)</title>
+</head>
+
+<body>
+  <div class="w-100 d-flex flex-column align-items-center justify-content-center p-4" style="height: 100vh;">
+    <img id="thumbnail" src="" style="border-radius: 50%; width:100px; height: 100px;" />
+    <div id="title" class="text-center my-2"></div>
+    <audio id="audio" preload="auto" controls>
+      <source id="audioSource" src="" />
+    </audio>
+  </div>
+  
+  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
+    integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous"></script>
+
+  <script>
+    const socket = io('https://socket.yuk.party');
+    //const socket = io('http://localhost:3000');
+    
+    var audio = document.getElementById('audio');
+    var audioSource = document.getElementById('audioSource');
+    audio.ontimeupdate = function () {
+      const currentTime = audio.currentTime;
+      const duration = audio && audio.duration ? audio.duration : 0;
+      const text = humanDuration(Math.ceil(currentTime)) + ' / ' + humanDuration(Math.ceil(duration))
+      socket.emit('putarlagu_updateState', {
+        currentTime,
+        duration,
+        text
+      });
+    };
+
+    audio.onended = function () {
+      audioSource.src = '';
+      audio.load();
+      socket.emit('putarlagu_end');
+    };
+
+    socket.emit('putarlagu_currentPlayingServer');
+    socket.on('putarlagu_currentPlayingServer', function (data) {
+      if (data) {
+        if (data.info) {
+          document.getElementById('thumbnail').src = data.info.thumbnailVideo;
+          document.getElementById('title').innerHTML = data.info.title;
+        }
+        if (data.audioStream && data.audioStream[0]) {
+          try {
+            audioSource.src = data.audioStream[0].url;
+            audio.load();
+            audio.play();
+          } catch (error) {
+            console.log("ERRR");
+          }
+          
+        }
+      }
+     
+    });
+
+    function leftPad(str, num, chr) {
+      str = String(str)
+      num = num || 2
+      chr = chr || '0'
+      while (str.length < num) str = (chr + str)
+      return str
+    }
+
+    function humanDuration(seconds) {
+      const h = Math.floor(seconds / (60 * 60))
+      const m = Math.floor(((seconds / 60) % 60))
+      const s = seconds % 60
+
+      if (h) {
+        return (
+          h + ':' + leftPad(m) + ':' + leftPad(s)
+        )
+      }
+
+      return (
+        m + ':' + leftPad(s)
+      )
+    }
+  </script>
+</body>
+
+</html>
