@@ -9,41 +9,51 @@
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
     integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css">
-  <link rel="stylesheet" href="styles.css?v=1.0.0">
+  <link rel="stylesheet" href="styles.css?v=1.0.1">
   <link rel="shortcut icon" href="favicon.png" type="image/x-icon" />
   <title>Putar Lagu</title>
 </head>
 
 <body>
-  <div id="app" class="wrapper container-fluid" :class="{'dark-mode': mode == 'dark-mode'}" v-cloak>
+  <div id="app" class="wrapper container-fluid"
+    :class="{'dark-mode': mode == 'dark-mode', 'light-mode' : mode == 'light-mode'}" v-cloak>
     <div class="row">
       <div class="col-md-4 border-right-1">
         <div class="d-flex flex-row justify-content-between align-items-center">
           <h1>Putar Lagu</h1>
-          <div class="dropdown show">
-            <a class="btn btn-outline-info dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <div class="btn-group">
+            <button type="button" class="btn btn-link text-info dropdown-toggle" data-toggle="dropdown"
+              aria-haspopup="true" aria-expanded="false">
               <i class="fas fa-cog mr-2"></i>
-            </a>
-          
-            <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-              <a class="dropdown-item" href="#" v-on:click="toggleMode()">
-                <span v-if="mode != 'dark-mode'"><i class="fas fa-moon"></i> Dark Mode</span>
-                <span v-if="mode == 'dark-mode'"><i class="far fa-moon"></i> Light Mode</span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-right">
+              <a class="dropdown-item" href="javascript:;" v-on:click="toggleMode()">
+                <span v-if="mode != 'dark-mode'"><i class="fas fa-moon" style="min-width: 30px"></i> Dark Mode</span>
+                <span v-if="mode == 'dark-mode'"><i class="far fa-moon" style="min-width: 30px"></i> Light Mode</span>
+              </a>
+              <a class="dropdown-item" href="javascript:;" onclick="login(true)">
+                <i class="fas fa-user-edit" style="min-width: 30px"></i> Change Nickname
+              </a>
+              <a class="dropdown-item" href="javascript:;" onclick="restartServer()">
+                <i class="fas fa-redo" style="min-width: 30px"></i> Restart Server
               </a>
             </div>
           </div>
+
         </div>
-        
+
         <div class="add-queue">
           <div class="input-group mb-3">
-            <input type="url" id="url" value="" v-model="searchValue" @focus="onFocus = true" @blur="falseDelay()" autocomplete="off" class="form-control input-url"
-              placeholder="Url Youtube" aria-label="Url Youtube" aria-describedby="basic-addon2">
+            <input type="url" id="url" value="" v-model="searchValue" @focus="onFocus = true" @blur="falseDelay()"
+              autocomplete="off" class="form-control input-url" placeholder="Url Youtube" aria-label="Url Youtube"
+              aria-describedby="basic-addon2">
             <div class="input-group-append">
               <button class="btn btn-dark" type="button" onclick="addQueue()" id="btnAddQueue">Add Queue</button>
             </div>
           </div>
           <div v-if="searchResults.length > 0 && onFocus" class="search-list">
-            <div v-for="search in searchResults" :key="search.id" class="d-flex flex-row mb-1 search-result" v-on:click="addQueueSearch(search)">
+            <div v-for="search in searchResults" :key="search.id" class="d-flex flex-row mb-1 search-result"
+              v-on:click="addQueueSearch(search)">
               <img :src="search.snippet.thumbnails.default.url" width="100" class="meta-video-thumb mr-2" />
               <div class="meta-video-detail w-100">
                 <h3 class="title">{{ search.title }}</h3>
@@ -84,10 +94,35 @@
             </div>
           </div>
         </div>
+        <section id="chat-box" class="d-flex flex-column">
+          <div class="chat-messages">
+            <div v-for="chat in chatList" class="chat mb-2"
+              :class="{'chat-right' : chat.user.visitorID == currentUser.visitorID}">
+              <span class="font-weight: bold;">{{chat.user.name}}</span>
+              <div class="chat-bubble chat-direction" :class="{'bg-danger': chat.type == 'skip_notification'}">
+                {{chat.message}}
+              </div>
+            </div>
+          </div>
+          <div class="chat-typing">
+            <div v-if="getIsTyping()" class="w-100 text-center my-1"
+              style="font-size: .8rem; font-style: italic; color: #999;">{{ getIsTyping() }}</div>
+          </div>
+          <div class="chat-input-box">
+            <div class="input-group">
+              <input type="text" v-model="chatInput" v-on:keyup.enter="sendMessage()" class="form-control chat-input"
+                placeholder="Type your message" aria-describedby="basic-addon2">
+              <div class="input-group-append">
+                <button class="btn btn-outline-secondary" type="button" v-on:click="sendMessage()"><i
+                    class="far fa-paper-plane"></i></button>
+              </div>
+            </div>
+          </div>
+        </section>
         <div v-if="users.length > 0" class="users-list my-3">
-          Online <br/> 
+          Online <br />
           <a v-for="user in users" :key="user.id" class="badge badge-warning mr-2">
-            <i class="fa fa-user"></i> 
+            <i class="fa fa-user"></i>
             {{user.name}}
           </a>
         </div>
@@ -111,20 +146,22 @@
                   <h3 class="title">{{ queue.title }}</h3>
                   <div class="d-flex flex-row justify-content-between align-items-center">
                     <span class="author">{{ queue.author }}</span>
-                    <span class="badge badge-primary mx-2"><i class="fa fa-plus" aria-hidden="true"></i> {{queue.addedBy}}</span>
+                    <span class="badge badge-primary mx-2"><i class="fa fa-plus" aria-hidden="true"></i>
+                      {{queue.addedBy}}</span>
                   </div>
-                  
+
                 </div>
               </div>
             </a>
           </div>
         </transition>
-        
+
       </div>
       <div class="col-md-4 mt-2">
         <div class="d-flex justify-content-between">
           <h2 class="flex-grow-1">History</h2>
-          <button v-on:click="randomAddQueue()" class="btn btn-link text-info"><i class="fas fa-random"></i> Add Random</button>
+          <button v-on:click="randomAddQueue()" class="btn btn-link text-info"><i class="fas fa-random"></i> Add
+            Random</button>
         </div>
         <div v-if="historyList.length < 1">
           <div class="d-flex align-items-center justify-content-center" style="height: 80vh;">
@@ -140,14 +177,15 @@
                   <h3 class="title">{{ history.title }}</h3>
                   <div class="d-flex flex-row justify-content-between align-items-center">
                     <span class="author">{{ history.author }}</span>
-                    <span v-if="history.skipBy" class="badge badge-danger mx-2"><i class="fa fa-ban"></i> {{history.skipBy}}</span>
+                    <span v-if="history.skipBy" class="badge badge-danger mx-2"><i class="fa fa-ban"></i>
+                      {{history.skipBy}}</span>
                   </div>
                 </div>
               </div>
             </a>
           </div>
         </transition>
-        
+
       </div>
     </div>
   </div>
@@ -169,7 +207,8 @@
     integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous">
   </script>
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
-  <script src="main.js?v=1.0.0"></script>
+  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+  <script src="main.js?v=1.0.1"></script>
 </body>
 
 </html>

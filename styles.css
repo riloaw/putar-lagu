@@ -3,6 +3,7 @@
     padding: 0;
     box-sizing: border-box;
 }
+
 .btn:focus,
 a:focus,
 input:focus {
@@ -18,7 +19,10 @@ body {
     min-height: 100vh;
 }
 
-[v-cloak] > * { display:none }
+[v-cloak]>* {
+    display: none
+}
+
 [v-cloak]::before {
     content: "Loading...";
     position: absolute;
@@ -31,6 +35,10 @@ body {
 .btn:hover {
     text-decoration: none;
     opacity: .9;
+}
+
+.dropdown-item:hover {
+    background-color: #ccc;
 }
 
 .input-url {
@@ -162,6 +170,107 @@ h3.title {
     border-right: 1px dashed #ddd;
 }
 
+.swal-modal {
+    background-color: #ebebeb;
+}
+
+.swal-text {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+input.swal-content__input {
+    border: 1px solid #555;
+    border-radius: 5px;
+}
+
+.chat-box {
+    position: relative;
+}
+
+.chat-messages {
+    position: relative;
+    border: 1px solid #d3d3d3;
+    border-radius: 5px;
+    background: #ededed;
+    padding: 1rem 0.5rem;
+    height: calc(100vh - 550px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    font-size: .8rem;
+}
+
+.chat-input-box {
+    border-top: 1px solid #d3d3d3;
+}
+
+.chat-input-box input {
+    padding: 1rem;
+}
+
+.chat {
+    clear: both;
+}
+
+.chat-bubble {
+    position: relative;
+    border-radius: 10px;
+    background: #17a2b8;
+    color: #fff;
+    margin-top: 4px;
+    margin-left: 0.7rem;
+    padding: 0.4rem;
+    width: fit-content;
+    max-width: 80%;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.chat-typing {
+    height: 2rem;
+    width: 100%;
+}
+
+.chat-direction:after {
+    content: ' ';
+    position: absolute;
+    width: 0;
+    height: 0;
+    left: -10px;
+    right: auto;
+    top: 0px;
+    bottom: auto;
+    border: 10px solid;
+    border-color: #17a2b8 transparent transparent transparent;
+}
+
+
+.chat-right {
+    float: right;
+}
+
+.chat-right>* {
+    float: right;
+    clear: both;
+}
+
+.chat-right .chat-bubble {
+    margin-right: 0.7rem;
+    background-color: #525252;
+}
+
+.chat-right .chat-direction:after {
+    right: -10px;
+    left: auto;
+    top: 0px;
+    bottom: auto;
+    border-color: #525252 transparent transparent transparent;
+}
+
+.bg-danger.chat-direction:after {
+    border-color: #dc3545 transparent transparent transparent;
+}
+
 #snackbar {
     visibility: hidden;
     min-width: 250px;
@@ -261,41 +370,69 @@ h3.title {
     animation: slide-out 0.3s forwards;
     -webkit-animation: slide-inverse-out 0.3s forwards;
 }
-  
+
 @keyframes slide-in {
-    100% { transform: translateX(0%); }
+    100% {
+        transform: translateX(0%);
+    }
 }
 
 @-webkit-keyframes slide-in {
-    100% { -webkit-transform: translateX(0%); }
+    100% {
+        -webkit-transform: translateX(0%);
+    }
 }
 
 @keyframes slide-inverse-in {
-    100% { transform: translateX(0%); }
+    100% {
+        transform: translateX(0%);
+    }
 }
 
 @-webkit-keyframes slide-inverse-in {
-    100% { -webkit-transform: translateX(0%); }
+    100% {
+        -webkit-transform: translateX(0%);
+    }
 }
 
 @keyframes slide-inverse-out {
-    0% { transform: translateX(0%); }
-    100% { transform: translateX(100%); }
+    0% {
+        transform: translateX(0%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
 }
 
 @-webkit-keyframes slide-inverse-out {
-    0% { -webkit-transform: translateX(0%); }
-    100% { -webkit-transform: translateX(100%); }
+    0% {
+        -webkit-transform: translateX(0%);
+    }
+
+    100% {
+        -webkit-transform: translateX(100%);
+    }
 }
 
 @keyframes slide-out {
-    0% { transform: translateX(0%); }
-    100% { transform: translateX(-100%); }
+    0% {
+        transform: translateX(0%);
+    }
+
+    100% {
+        transform: translateX(-100%);
+    }
 }
 
 @-webkit-keyframes slide-out {
-    0% { -webkit-transform: translateX(0%); }
-    100% { -webkit-transform: translateX(-100%); }
+    0% {
+        -webkit-transform: translateX(0%);
+    }
+
+    100% {
+        -webkit-transform: translateX(-100%);
+    }
 }
 
 ::-webkit-scrollbar {
@@ -314,11 +451,16 @@ h3.title {
     background: #555;
 }
 
+.light-mode {
+    transition: 1s all;
+}
+
 /** DARK MODE **/
 
 .dark-mode {
     background-color: #141414 !important;
     color: #b7b7b7 !important;
+    transition: 1s all;
 }
 
 .dark-mode .meta-video:hover {
@@ -344,4 +486,9 @@ h3.title {
 
 .dark-mode ::-webkit-scrollbar-thumb:hover {
     background: #910404 !important;
+}
+
+.dark-mode .chat-messages {
+    border: 1px solid #282828;
+    background-color: #1c1c1c;
 }

@@ -2,6 +2,9 @@ const storage = window.localStorage;
 const socket = io('https://socket.yuk.party');
 //const socket = io('localhost:3000');
 const sessionName = 'putarlagu_session';
+const TYPING_TIMER_LENGTH = 400; // ms
+let typing = false;
+let lastTypingTime;
 
 var app = new Vue({
     el: '#app',
@@ -17,16 +20,26 @@ var app = new Vue({
         state: null,
         selectedQueue: null,
         selectedHistory: null,
-        mode: null
+        mode: null,
+        chatList: [],
+        typings: [],
+        chatInput: null,
     },
-   
+
+    watch: {
+        chatInput: function (val) {
+            updateTyping();
+        }
+    },
     mounted() {
         this.currentUser = window.localStorage.getItem(sessionName);
         this.mode = window.localStorage.getItem('putarlagu_mode');
     },
     methods: {
         addQueueVue(queue) {
-            this.historyList = this.historyList.filter(function(el) { return el.idVideo != queue.idVideo; });
+            this.historyList = this.historyList.filter(function (el) {
+                return el.idVideo != queue.idVideo;
+            });
             addQueueByData(queue);
         },
         randomAddQueue() {
@@ -46,7 +59,9 @@ var app = new Vue({
             if (queue.addedBy != this.currentUser.name) {
                 return false;
             }
-            this.queueList = this.queueList.filter(function(el) { return el.idVideo != queue.idVideo; });
+            this.queueList = this.queueList.filter(function (el) {
+                return el.idVideo != queue.idVideo;
+            });
             removeQueue(queue);
         },
         falseDelay() {
@@ -65,17 +80,38 @@ var app = new Vue({
                 this.mode = 'light-mode';
             }
             storage.setItem('putarlagu_mode', this.mode);
+        },
+
+        getIsTyping() {
+            if (this.typings.length < 1) {
+                return null;
+            } else {
+                const typer = this.typings.filter((typer) => typer != this.currentUser.name);
+                if (typer.length > 0) {
+                    return typer.join(", ") + " is typing...";
+                }
+            }
+        },
+
+        sendMessage() {
+            if (this.chatInput && this.chatInput.length > 0) {
+                sendMessage(this.chatInput);
+                this.chatInput = null;
+            }
+
         }
     }
 })
-
+var connected = false;
 socket.on('connect', function () {
     console.log('Connected');
+    connected = true;
     getQueue();
     getHistory();
     getCurrentPlaying();
     login();
     getUsers();
+    getMessageList();
 });
 
 socket.on('putarlagu_queueList', function (data) {
@@ -136,6 +172,33 @@ socket.on('putarlagu_currentPlaying', function (data) {
         document.title = "Putar Lagu";
     }
 });
+
+socket.on('putarlagu_messageList', function (data) {
+    app.chatList = data;
+    setTimeout(() => {
+        document.getElementsByClassName('chat-messages')[0].scrollTop = document.getElementsByClassName('chat-messages')[0].scrollHeight;
+    }, 0);
+});
+
+socket.on('putarlagu_newMessage', function (data) {
+    app.chatList.push(data);
+    setTimeout(() => {
+        document.getElementsByClassName('chat-messages')[0].scrollTop = document.getElementsByClassName('chat-messages')[0].scrollHeight;
+    }, 0);
+});
+
+socket.on('putarlagu_typing', function (data) {
+    if (!app.typings.includes(data.name)) {
+        app.typings.push(data.name);
+    }
+});
+
+socket.on('putarlagu_stopTyping', function (data) {
+    if (app.typings.includes(data.name)) {
+        app.typings = arrayRemove(app.typings, data.name);
+    }
+});
+
 
 var inputUrl = document.getElementById("url");
 var btnAddQueue = document.getElementById("btnAddQueue");
@@ -210,6 +273,10 @@ function getUsers() {
     socket.emit('putarlagu_users');
 }
 
+function getMessageList() {
+    socket.emit('putarlagu_messageList', {});
+}
+
 function getCurrentPlaying() {
     socket.emit('putarlagu_currentPlaying');
 }
@@ -229,10 +296,55 @@ function search(q) {
 function skip() {
     var r = confirm("Are you sure to skip this song : " + app.currentPlaying.title);
     if (r == true) {
-        socket.emit('putarlagu_skip');
+        socket.emit('putarlagu_skip', app.currentPlaying.title);
         var audio = new Audio('notif.wav');
         audio.play();
     }
+}
+
+function restartServer() {
+    swal({
+            title: "Are you sure?",
+            text: "The song playing will start all over again",
+            icon: "warning",
+            buttons: true,
+            dangerMode: true,
+        })
+        .then((confirm) => {
+            if (confirm) {
+                stop();
+                play();
+            }
+        });
+}
+
+function arrayRemove(arr, value) {
+    return arr.filter(function (ele) {
+        return ele != value;
+    });
+}
+
+const updateTyping = () => {
+    if (connected) {
+        if (!typing) {
+            typing = true;
+            socket.emit('putarlagu_typing');
+        }
+        lastTypingTime = (new Date()).getTime();
+
+        setTimeout(() => {
+            const typingTimer = (new Date()).getTime();
+            const timeDiff = typingTimer - lastTypingTime;
+            if (timeDiff >= TYPING_TIMER_LENGTH && typing) {
+                socket.emit('putarlagu_stopTyping');
+                typing = false;
+            }
+        }, TYPING_TIMER_LENGTH);
+    }
+}
+
+const sendMessage = (message) => {
+    socket.emit('putarlagu_newMessage', message);
 }
 
 async function login(forceUpdateName = false) {
@@ -248,7 +360,17 @@ async function login(forceUpdateName = false) {
             let updateSession = session ? JSON.parse(session) : {};
             updateSession.visitorID = visitorID;
             if (!updateSession.name || forceUpdateName) {
-                var name = prompt("Please enter your name", generateName());
+                var name = await swal({
+                    text: 'Insert Your Nickname.',
+                    content: {
+                        element: 'input'
+                    },
+                    button: {
+                        text: "Submit",
+                        closeModal: true,
+                    },
+                });
+                //var name = prompt("Please enter your name", generateName());
                 if (app.users.find((user) => user.name == name) && app.currentUser.name != name) {
                     return login(true);
                 }
