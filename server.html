@@ -71,7 +71,7 @@
         if (data.audioStream && data.audioStream[0]) {
           try {
             audioSource.src = data.audioStream[0].url;
-            audio.load();
+            audio.play();
           } catch (error) {
             console.log("ERRR");
           }
