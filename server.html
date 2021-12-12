@@ -27,7 +27,7 @@
   <script>
     const socket = io('https://socket.yuk.party');
     //const socket = io('http://localhost:3000');
-    
+    const errorCount = 0;
     var audio = document.getElementById('audio');
     var audioSource = document.getElementById('audioSource');
     var currentPlaying = null;
@@ -49,10 +49,16 @@
     };
 
     audioSource.onerror = function() {
-      const title = currentPlaying ? currentPlaying.title : 'Lagunya error ga bisa diputer';
-      socket.emit('putarlagu_skip', title);
-      console.log("Error! Something went wrong");
+      if (errorCount < 3) {
+        socket.emit('putarlagu_currentPlayingServer');
+      } else {
+        socket.emit('putarlagu_skip');
+      }
     };
+
+    audio.play().catch(function() {
+        alert("Klik tombol play");
+    });
 
     socket.emit('putarlagu_currentPlayingServer');
     socket.on('putarlagu_currentPlayingServer', function (data) {
@@ -66,7 +72,6 @@
           try {
             audioSource.src = data.audioStream[0].url;
             audio.load();
-            audio.play();
           } catch (error) {
             console.log("ERRR");
           }

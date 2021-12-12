@@ -141,7 +141,10 @@ socket.on('putarlagu_search', function (data) {
                     },
                     publishedAt: "Play Count: " + history.playingCount
                 },
-                id: history.idVideo,
+                id: {
+                    videoId: history.idVideo
+                },
+                url: history.urlVideo,
                 title: history.title,
                 duration_raw: "From History"
             });
