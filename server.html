@@ -23,7 +23,7 @@
   
   <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
     integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous"></script>
-
+  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
   <script>
     const socket = io('https://socket.yuk.party');
     //const socket = io('http://localhost:3000');
@@ -59,7 +59,7 @@
     };
 
     audio.play().catch(function() {
-        alert("Klik tombol play");
+        swal("Klik tombol play untuk memulai pertama kali");
     });
 
     socket.emit('putarlagu_currentPlayingServer');
