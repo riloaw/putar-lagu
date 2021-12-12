@@ -50,7 +50,9 @@
 
     audioSource.onerror = function() {
       if (errorCount < 3) {
-        //socket.emit('putarlagu_currentPlayingServer');
+        setTimeout(() => {
+          socket.emit('putarlagu_currentPlayingServer');
+        }, 500);
         errorCount++;
       } else {
         socket.emit('putarlagu_skip');
@@ -109,6 +111,22 @@
         m + ':' + leftPad(s)
       )
     }
+    function audioVolumeIn(q){
+       if(q.volume){
+          var InT = 0;
+          var setVolume = 1; // Target volume level for new song
+          var speed = 0.04; // Rate of increase
+          q.volume = InT;
+          var eAudio = setInterval(function(){
+              InT += speed;
+              q.volume = InT.toFixed(1);
+              if(InT.toFixed(1) >= setVolume){
+                 clearInterval(eAudio);
+                 //alert('clearInterval eAudio'+ InT.toFixed(1));
+              };
+          },50);
+       };
+   };
   </script>
 </body>
 
