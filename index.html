@@ -97,8 +97,8 @@
         <section id="chat-box" class="d-flex flex-column">
           <div class="chat-messages">
             <div v-for="chat in chatList" class="chat mb-2"
-              :class="{'chat-right' : chat.user.visitorID == currentUser.visitorID}">
-              <span class="font-weight: bold;">{{chat.user.name}}</span>
+              :class="{'chat-right' : chat && chat.user && chat.user.visitorID == currentUser.visitorID}">
+              <span class="font-weight: bold;" v-if="chat && chat.user">{{chat.user.name}}</span>
               <div class="chat-bubble chat-direction" :class="{'bg-danger': chat.type == 'skip_notification'}">
                 {{chat.message}}
               </div>
