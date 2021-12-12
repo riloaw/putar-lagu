@@ -49,11 +49,7 @@
     };
 
     audioSource.onerror = function() {
-      if (errorCount < 3) {
-        socket.emit('putarlagu_currentPlayingServer');
-      } else {
-        socket.emit('putarlagu_skip');
-      }
+      socket.emit('putarlagu_currentPlayingServer');
     };
 
     audio.play().catch(function() {
@@ -71,6 +67,7 @@
         if (data.audioStream && data.audioStream[0]) {
           try {
             audioSource.src = data.audioStream[0].url;
+            audio.load();
             audio.play();
           } catch (error) {
             console.log("ERRR");
