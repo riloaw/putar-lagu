@@ -30,6 +30,7 @@
     
     var audio = document.getElementById('audio');
     var audioSource = document.getElementById('audioSource');
+    var currentPlaying = null;
     audio.ontimeupdate = function () {
       const currentTime = audio.currentTime;
       const duration = audio && audio.duration ? audio.duration : 0;
@@ -47,10 +48,17 @@
       socket.emit('putarlagu_end');
     };
 
+    audioSource.onerror = function() {
+      const title = currentPlaying ? currentPlaying.title : 'Lagunya error ga bisa diputer';
+      socket.emit('putarlagu_skip', title);
+      console.log("Error! Something went wrong");
+    };
+
     socket.emit('putarlagu_currentPlayingServer');
     socket.on('putarlagu_currentPlayingServer', function (data) {
       if (data) {
         if (data.info) {
+          currentPlaying = data.info;
           document.getElementById('thumbnail').src = data.info.thumbnailVideo;
           document.getElementById('title').innerHTML = data.info.title;
         }
