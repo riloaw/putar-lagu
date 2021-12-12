@@ -50,7 +50,7 @@
 
     audioSource.onerror = function() {
       if (errorCount < 3) {
-        socket.emit('putarlagu_currentPlayingServer');
+        //socket.emit('putarlagu_currentPlayingServer');
         errorCount++;
       } else {
         socket.emit('putarlagu_skip');
