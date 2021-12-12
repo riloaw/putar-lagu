@@ -47,13 +47,17 @@ var app = new Vue({
             addQueueByData(item);
         },
         addQueueSearch(search) {
-            const queue = {
-                idVideo: search.id.videoId,
-                urlVideo: search.url,
-                title: search.title
+            if (search && search.idVideo) {
+                addQueueByData(search);
+            } else {
+                const queue = {
+                    idVideo: search.id.videoId,
+                    urlVideo: search.url,
+                    title: search.title
+                }
+                addQueueByData(queue);
             }
             this.searchValue = '';
-            addQueueByData(queue);
         },
         removeQueueVue(queue) {
             if (queue.addedBy != this.currentUser.name) {
@@ -312,8 +316,7 @@ function restartServer() {
         })
         .then((confirm) => {
             if (confirm) {
-                stop();
-                play();
+                socket.emit('putarlagu_currentPlayingServer');
             }
         });
 }
