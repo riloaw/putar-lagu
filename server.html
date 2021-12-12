@@ -74,7 +74,9 @@
           try {
             audioSource.src = data.audioStream[0].url;
             audio.load();
-            audio.play();
+            setTimeout(() => {
+              audio.play();
+            }, 300);
           } catch (error) {
             console.log("ERRR");
           }
