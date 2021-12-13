@@ -5,7 +5,7 @@ const sessionName = 'putarlagu_session';
 const TYPING_TIMER_LENGTH = 400; // ms
 let typing = false;
 let lastTypingTime;
-
+Vue.use(EmojiPicker);
 var app = new Vue({
     el: '#app',
     data: {
@@ -23,9 +23,9 @@ var app = new Vue({
         mode: null,
         chatList: [],
         typings: [],
-        chatInput: null,
+        chatInput: '',
+        searchEmoji: ''
     },
-
     watch: {
         chatInput: function (val) {
             updateTyping();
@@ -100,11 +100,21 @@ var app = new Vue({
         sendMessage() {
             if (this.chatInput && this.chatInput.length > 0) {
                 sendMessage(this.chatInput);
-                this.chatInput = null;
+                this.chatInput = '';
             }
 
-        }
-    }
+        },
+        insertEmoji(emoji) {
+            this.chatInput += emoji
+        },
+    },
+    directives: {
+        focus: {
+            inserted(el) {
+                el.focus()
+            },
+        },
+    },
 })
 var connected = false;
 socket.on('connect', function () {
@@ -319,7 +329,8 @@ function restartServer() {
         })
         .then((confirm) => {
             if (confirm) {
-                socket.emit('putarlagu_currentPlayingServer');
+                stop();
+                play();
             }
         });
 }

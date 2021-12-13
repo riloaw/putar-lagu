@@ -16,9 +16,11 @@
   <div class="w-100 d-flex flex-column align-items-center justify-content-center p-4" style="height: 100vh;">
     <img id="thumbnail" src="" style="border-radius: 50%; width:100px; height: 100px;" />
     <div id="title" class="text-center my-2"></div>
-    <audio id="audio" preload="auto" controls>
-      <source id="audioSource" src="" />
-    </audio>
+    <div id="audio-container">
+      <audio id="audio" preload="metadata" controls style="width: calc(100vw - 2rem);">
+        <source id="audioSource" src="" />
+      </audio>
+    </div>
   </div>
   
   <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
@@ -29,63 +31,71 @@
     //const socket = io('http://localhost:3000');
     var errorCount = 0;
     var audio = document.getElementById('audio');
-    var audioSource = document.getElementById('audioSource');
     var currentPlaying = null;
     audio.ontimeupdate = function () {
       const currentTime = audio.currentTime;
       const duration = audio && audio.duration ? audio.duration : 0;
+      const volume = audio ? audio.volume : 1;
+      const isPaused = audio ? audio.paused : true;
       const text = humanDuration(Math.ceil(currentTime)) + ' / ' + humanDuration(Math.ceil(duration))
       socket.emit('putarlagu_updateState', {
         currentTime,
         duration,
-        text
+        text,
+        volume,
+        isPaused
       });
     };
 
     audio.onended = function () {
-      audioSource.src = '';
-      audio.load();
       socket.emit('putarlagu_end');
     };
 
-    audioSource.onerror = function() {
-      if (errorCount < 3) {
-        setTimeout(() => {
-          socket.emit('putarlagu_currentPlayingServer');
-        }, 500);
-        errorCount++;
-      } else {
-        socket.emit('putarlagu_skip');
-        errorCount = 0;
-      }
-    };
-
     audio.play().catch(function() {
-        swal("Klik tombol play untuk memulai pertama kali");
+        swal("Klik tombol play untuk memulai pertama kali").then(() => { audio.play() });
     });
 
-    socket.emit('putarlagu_currentPlayingServer');
-    socket.on('putarlagu_currentPlayingServer', function (data) {
+    audio.addEventListener('loadedmetadata', function() {
+      audio.play();
+    });
+
+    socket.emit('putarlagu_play');
+    socket.on('putarlagu_play', function (data) {
+      audio.innerHTML = '';
       if (data) {
-        if (data.info) {
-          currentPlaying = data.info;
-          document.getElementById('thumbnail').src = data.info.thumbnailVideo;
-          document.getElementById('title').innerHTML = data.info.title;
-        }
-        if (data.audioStream && data.audioStream[0]) {
-          try {
-            audioSource.src = data.audioStream[0].url;
-            audio.load();
-            setTimeout(() => {
-              audio.play();
-            }, 300);
-          } catch (error) {
-            console.log("ERRR");
-          }
-          
-        }
+        currentPlaying = data;
+        document.getElementById('thumbnail').src = data.thumbnailVideo;
+        document.getElementById('title').innerHTML = data.title;
+
+        socket.emit('putarlagu_getYoutubeData', data.urlVideo);
       }
-     
+    });
+
+    socket.on('putarlagu_getYoutubeData', function (data) {
+      if (data) {
+        data.forEach((d, i) => {
+          var source      = document.createElement('source');
+          source.id       = 'source' + i;
+          source.src      = d.url;
+          source.type     = d.type;
+          audio.appendChild(source);
+        });
+        setTimeout(() => {
+          audio.load();
+        }, 200);
+      }
+      // if (data.audioStream && data.audioStream[0]) {
+      //     try {
+      //       audioSource.src = data.audioStream[0].url;
+      //       audio.load();
+      //       setTimeout(() => {
+      //         audio.play();
+      //       }, 300);
+      //     } catch (error) {
+      //       console.log("ERRR");
+      //     }
+          
+      //   }
     });
 
     function leftPad(str, num, chr) {
