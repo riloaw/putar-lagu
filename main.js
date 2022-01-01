@@ -579,7 +579,12 @@ function listenTooFunc() {
 }
 
 $('#playerModal').on('shown.bs.modal', function () {
-    listenTooFunc();
+    if (!app.state) {
+        $('#playerModal').modal('hide')
+    } else {
+        listenTooFunc();
+    }
+   
 });
 
 $('#syncTime').on('click', function (e) {
