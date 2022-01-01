@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+    integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <link rel="shortcut icon" href="favicon.png" type="image/x-icon" />
+  <title>Putar Lagu (Server)</title>
+</head>
+
+<body>
+  <div class="w-100 d-flex flex-column align-items-center justify-content-center p-4" style="height: 100vh;">
+    <img id="thumbnail" src="" style="border-radius: 50%; width:100px; height: 100px;" />
+    <div id="title" class="text-center my-2"></div>
+    <div id="audio-container">
+      <audio id="audio" preload="metadata" controls style="width: calc(100vw - 2rem);">
+        <source id="audioSource" src="" />
+      </audio>
+    </div>
+  </div>
+  
+  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
+    integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+  <script>
+    const socket = io('https://socket.yuk.party');
+    //const socket = io('http://localhost:3000');
+    var errorCount = 0;
+    var audio = document.getElementById('audio');
+    var currentPlaying = null;
+    audio.ontimeupdate = function () {
+      const currentTime = audio.currentTime;
+      const duration = audio && audio.duration ? audio.duration : 0;
+      const volume = audio ? audio.volume : 1;
+      const isPaused = audio ? audio.paused : true;
+      const text = humanDuration(Math.ceil(currentTime)) + ' / ' + humanDuration(Math.ceil(duration))
+      socket.emit('putarlagu_updateState', {
+        currentTime,
+        duration,
+        text,
+        volume,
+        isPaused
+      });
+    };
+
+    audio.onended = function () {
+      socket.emit('putarlagu_end');
+    };
+
+    audio.play().catch(function() {
+        swal("Klik tombol play untuk memulai pertama kali").then(() => { audio.play() });
+    });
+
+    audio.addEventListener('loadedmetadata', function() {
+      audio.play();
+    });
+
+    socket.emit('putarlagu_play');
+    socket.on('putarlagu_play', function (data) {
+      audio.innerHTML = '';
+      if (data) {
+        currentPlaying = data;
+        document.getElementById('thumbnail').src = data.thumbnailVideo;
+        document.getElementById('title').innerHTML = data.title;
+        console.log(data.urlVideo);
+        socket.emit('putarlagu_getYoutubeData', data.urlVideo);
+      }
+    });
+
+    socket.on('putarlagu_getYoutubeData', function (data) {
+      console.log(data);
+      if (data) {
+        data.forEach((d, i) => {
+          var source      = document.createElement('source');
+          source.id       = 'source' + i;
+          source.src      = d.url;
+          source.type     = d.type;
+          audio.appendChild(source);
+        });
+        setTimeout(() => {
+          audio.load();
+        }, 200);
+      }
+      // if (data.audioStream && data.audioStream[0]) {
+      //     try {
+      //       audioSource.src = data.audioStream[0].url;
+      //       audio.load();
+      //       setTimeout(() => {
+      //         audio.play();
+      //       }, 300);
+      //     } catch (error) {
+      //       console.log("ERRR");
+      //     }
+          
+      //   }
+    });
+
+    function leftPad(str, num, chr) {
+      str = String(str)
+      num = num || 2
+      chr = chr || '0'
+      while (str.length < num) str = (chr + str)
+      return str
+    }
+
+    function humanDuration(seconds) {
+      const h = Math.floor(seconds / (60 * 60))
+      const m = Math.floor(((seconds / 60) % 60))
+      const s = seconds % 60
+
+      if (h) {
+        return (
+          h + ':' + leftPad(m) + ':' + leftPad(s)
+        )
+      }
+
+      return (
+        m + ':' + leftPad(s)
+      )
+    }
+    function audioVolumeIn(q){
+       if(q.volume){
+          var InT = 0;
+          var setVolume = 1; // Target volume level for new song
+          var speed = 0.04; // Rate of increase
+          q.volume = InT;
+          var eAudio = setInterval(function(){
+              InT += speed;
+              q.volume = InT.toFixed(1);
+              if(InT.toFixed(1) >= setVolume){
+                 clearInterval(eAudio);
+                 //alert('clearInterval eAudio'+ InT.toFixed(1));
+              };
+          },50);
+       };
+   };
+  </script>
+</body>
+
+</html>

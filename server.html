@@ -10,92 +10,160 @@
     integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
   <link rel="shortcut icon" href="favicon.png" type="image/x-icon" />
   <title>Putar Lagu (Server)</title>
+  <style>
+    .video-info {
+      width: 100%;
+      max-width: 700px;
+    }
+
+    img#thumbnail {
+      border-radius: 50%;
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+    }
+
+    .video-container {
+      position: relative;
+      padding-bottom: calc(100vh - 300px);
+      padding-top: 30px;
+      height: 0;
+      max-height: 300px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 700px;
+      border-radius: 20px;
+    }
+
+    .video-container iframe,
+    .video-container object,
+    .video-container embed {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
 </head>
 
 <body>
   <div class="w-100 d-flex flex-column align-items-center justify-content-center p-4" style="height: 100vh;">
-    <img id="thumbnail" src="" style="border-radius: 50%; width:100px; height: 100px;" />
-    <div id="title" class="text-center my-2"></div>
-    <div id="audio-container">
-      <audio id="audio" preload="metadata" controls style="width: calc(100vw - 2rem);">
-        <source id="audioSource" src="" />
-      </audio>
+    <div class="video-info d-flex flex-row align-items-center mb-3">
+      <img id="thumbnail" src="" class="mr-3" />
+      <div id="title" class="text-center my-2"></div>
+    </div>
+    <div class="video-container">
+      <div id="player"></div>
     </div>
   </div>
-  
+
   <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
-    integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous"></script>
+    integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs" crossorigin="anonymous">
+  </script>
   <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
   <script>
     const socket = io('https://socket.yuk.party');
     //const socket = io('http://localhost:3000');
-    var errorCount = 0;
-    var audio = document.getElementById('audio');
     var currentPlaying = null;
-    audio.ontimeupdate = function () {
-      const currentTime = audio.currentTime;
-      const duration = audio && audio.duration ? audio.duration : 0;
-      const volume = audio ? audio.volume : 1;
-      const isPaused = audio ? audio.paused : true;
-      const text = humanDuration(Math.ceil(currentTime)) + ' / ' + humanDuration(Math.ceil(duration))
-      socket.emit('putarlagu_updateState', {
-        currentTime,
-        duration,
-        text,
-        volume,
-        isPaused
+    var player;
+    var videoId;
+
+    swal("Klik tombol play untuk memulai pertama kali").then(() => {
+      if (player) {
+        player.playVideo();
+      }
+    });
+
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        videoId: videoId ? videoId : 'ts8i-6AtDfc',
+        playerVars: {
+          'playsinline': 1
+        },
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange
+        }
       });
-    };
 
-    audio.onended = function () {
-      socket.emit('putarlagu_end');
-    };
+      var iframeWindow = player.getIframe().contentWindow;
+      var lastTimeUpdate = 0;
+      window.addEventListener("message", function (event) {
+        if (event.source === iframeWindow) {
+          var data = JSON.parse(event.data);
+          if (
+            data.event === "infoDelivery" &&
+            data.info &&
+            data.info.currentTime
+          ) {
+            var time = Math.floor(data.info.currentTime);
 
-    audio.play().catch(function() {
-        swal("Klik tombol play untuk memulai pertama kali").then(() => { audio.play() });
-    });
+            if (time !== lastTimeUpdate) {
+              lastTimeUpdate = time;
+              const duration = player.getDuration();
+              const currentTime = time;
+              const text = humanDuration(Math.ceil(currentTime)) + ' / ' + humanDuration(Math.ceil(duration))
+              socket.emit('putarlagu_updateState', {
+                currentTime,
+                duration,
+                text
+              });
+            }
+          }
+        }
+      });
+    }
 
-    audio.addEventListener('loadedmetadata', function() {
-      audio.play();
-    });
+    function onPlayerReady(event) {
+      event.target.playVideo();
+    }
+
+    function onPlayerStateChange(event) {
+      const duration = player.getDuration();
+      const currentTime = player.getCurrentTime();
+      const text = humanDuration(Math.ceil(currentTime)) + ' / ' + humanDuration(Math.ceil(duration));
+
+      if (event.data == YT.PlayerState.ENDED) {
+        socket.emit('putarlagu_end');
+      } else if (event.data == YT.PlayerState.PAUSED) {
+        socket.emit('putarlagu_updateState', {
+          currentTime,
+          duration,
+          text,
+          isPaused: true
+        });
+      } else {
+        socket.emit('putarlagu_updateState', {
+          currentTime,
+          duration,
+          text,
+          isPaused: false
+        });
+      }
+    }
+
+    function stopVideo() {
+      player.stopVideo();
+    }
 
     socket.emit('putarlagu_play');
     socket.on('putarlagu_play', function (data) {
-      audio.innerHTML = '';
       if (data) {
         currentPlaying = data;
         document.getElementById('thumbnail').src = data.thumbnailVideo;
         document.getElementById('title').innerHTML = data.title;
-
         socket.emit('putarlagu_getYoutubeData', data.urlVideo);
       }
-    });
-
-    socket.on('putarlagu_getYoutubeData', function (data) {
-      if (data) {
-        data.forEach((d, i) => {
-          var source      = document.createElement('source');
-          source.id       = 'source' + i;
-          source.src      = d.url;
-          source.type     = d.type;
-          audio.appendChild(source);
-        });
-        setTimeout(() => {
-          audio.load();
-        }, 200);
-      }
-      // if (data.audioStream && data.audioStream[0]) {
-      //     try {
-      //       audioSource.src = data.audioStream[0].url;
-      //       audio.load();
-      //       setTimeout(() => {
-      //         audio.play();
-      //       }, 300);
-      //     } catch (error) {
-      //       console.log("ERRR");
-      //     }
-          
-      //   }
+      videoId = data.idVideo;
+      player.loadVideoById(videoId, 0, "default");
     });
 
     function leftPad(str, num, chr) {
@@ -121,22 +189,6 @@
         m + ':' + leftPad(s)
       )
     }
-    function audioVolumeIn(q){
-       if(q.volume){
-          var InT = 0;
-          var setVolume = 1; // Target volume level for new song
-          var speed = 0.04; // Rate of increase
-          q.volume = InT;
-          var eAudio = setInterval(function(){
-              InT += speed;
-              q.volume = InT.toFixed(1);
-              if(InT.toFixed(1) >= setVolume){
-                 clearInterval(eAudio);
-                 //alert('clearInterval eAudio'+ InT.toFixed(1));
-              };
-          },50);
-       };
-   };
   </script>
 </body>
 
