@@ -34,6 +34,9 @@
               <a class="dropdown-item" href="javascript:;" onclick="login(true)">
                 <i class="fas fa-user-edit" style="min-width: 30px"></i> Change Nickname
               </a>
+              <a class="dropdown-item" href="javascript:;"  data-toggle="modal" data-target="#playerModal">
+                <i class="fab fa-youtube" style="min-width: 30px"></i> Listen too
+              </a>
               <a class="dropdown-item" href="javascript:;" onclick="restartServer()">
                 <i class="fas fa-redo" style="min-width: 30px"></i> Restart Server
               </a>
@@ -228,6 +231,27 @@
             <i class="fa fa-user"></i>
             {{user.name}}
           </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="playerModal" tabindex="-1" role="dialog" aria-labelledby="playerModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="playerModalLabel" style="font-size: 1rem;">Player</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body" style="height: 300px;">
+          <div id="player"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="syncTime" class="btn btn-warning"><i class="fas fa-sync"></i> Sync</button>
+          <button type="button" id="actionButton" class="btn btn-secondary"></button>
         </div>
       </div>
     </div>

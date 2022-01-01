@@ -160,7 +160,6 @@
         currentPlaying = data;
         document.getElementById('thumbnail').src = data.thumbnailVideo;
         document.getElementById('title').innerHTML = data.title;
-        socket.emit('putarlagu_getYoutubeData', data.urlVideo);
       }
       videoId = data.idVideo;
       player.loadVideoById(videoId, 0, "default");

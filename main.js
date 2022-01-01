@@ -528,3 +528,80 @@ function generateName() {
     var name = capFirst(catsName[getRandomInt(0, catsName.length + 1)]);
     return name;
 }
+
+
+var tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+var firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+var videoId;
+var player;
+
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        videoId: videoId ? videoId : 'ts8i-6AtDfc',
+        playerVars: {
+            'playsinline': 1
+        },
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+        }
+    });
+
+    function onPlayerReady(event) {
+        //event.target.playVideo();
+    }
+
+    function onPlayerStateChange(event) {
+
+    }
+}
+
+var listenToo = false;
+socket.on('putarlagu_play', function (data) {
+    videoId = data.idVideo;
+    if (listenToo == true) {
+        player.loadVideoById(videoId, 0, "default");
+    }
+});
+
+function listenTooFunc() {
+    if (player && app.currentPlaying && listenToo == false) {
+        $("#playerModal .modal-title").text(app.currentPlaying.title);
+        player.loadVideoById(app.currentPlaying.idVideo, app.state.currentTime, "default");
+        listenToo = true;
+        $('#actionButton').html(`<i class="fas fa-stop"></i> Stop`);
+    }
+}
+
+$('#playerModal').on('shown.bs.modal', function () {
+    listenTooFunc();
+});
+
+$('#syncTime').on('click', function (e) {
+    e.preventDefault();
+    if (player && listenToo == true) {
+        player.seekTo(app.state.currentTime);
+    }
+});
+
+$('#actionButton').on('click', function (e) {
+    e.preventDefault();
+    if (player && listenToo == false) {
+        listenTooFunc();
+        $(this).html(`<i class="fas fa-stop"></i> Stop`);
+    } else {
+        player.stopVideo();
+        listenToo = false;
+        $(this).html(`<i class="fas fa-play"></i> Play`);
+    }
+});
+
+// $('#playerModal').on('hidden.bs.modal', function () {
+//     player.stopVideo();
+//     listenToo = false;
+// });
