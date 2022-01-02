@@ -561,6 +561,38 @@ function onYouTubeIframeAPIReady() {
     }
 }
 
+function voiceNote(time=3000) {
+    var constraints = { audio: true };
+    navigator.mediaDevices.getUserMedia(constraints).then(function(mediaStream) {
+        var mediaRecorder = new MediaRecorder(mediaStream);
+        mediaRecorder.onstart = function(e) {
+            this.chunks = [];
+        };
+        mediaRecorder.ondataavailable = function(e) {
+            this.chunks.push(e.data);
+        };
+        mediaRecorder.onstop = function(e) {
+            var blob = new Blob(this.chunks, { 'type' : 'audio/ogg; codecs=opus' });
+            socket.emit('putarlagu', blob);
+        };
+
+        // Start recording
+        mediaRecorder.start();
+
+        // Stop recording after 5 seconds and broadcast it to server
+        setTimeout(function() {
+            mediaRecorder.stop()
+        }, time);
+    });
+}
+
+socket.on('putarlagu', function(arrayBuffer) {
+    var blob = new Blob([arrayBuffer], { 'type' : 'audio/ogg; codecs=opus' });
+    var audio = document.createElement('audio');
+    audio.src = window.URL.createObjectURL(blob);
+    audio.play();
+});
+
 var listenToo = false;
 socket.on('putarlagu_play', function (data) {
     videoId = data.idVideo;
@@ -587,6 +619,11 @@ $('#playerModal').on('shown.bs.modal', function () {
    
 });
 
+$('#sendVoiceNote').on('click', function (e) {
+    e.preventDefault();
+    voiceNote(3000);
+});
+
 $('#syncTime').on('click', function (e) {
     e.preventDefault();
     if (player && listenToo == true) {
@@ -605,6 +642,8 @@ $('#actionButton').on('click', function (e) {
         $(this).html(`<i class="fas fa-play"></i> Play`);
     }
 });
+
+
 
 // $('#playerModal').on('hidden.bs.modal', function () {
 //     player.stopVideo();
