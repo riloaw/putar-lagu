@@ -544,7 +544,9 @@ function onYouTubeIframeAPIReady() {
         width: '100%',
         videoId: videoId ? videoId : 'ts8i-6AtDfc',
         playerVars: {
-            'playsinline': 1
+            'controls': 0,
+            'playsinline': 1,
+            'disablekb': 1
         },
         events: {
             'onReady': onPlayerReady,
@@ -573,7 +575,7 @@ function voiceNote(time=3000) {
         };
         mediaRecorder.onstop = function(e) {
             var blob = new Blob(this.chunks, { 'type' : 'audio/ogg; codecs=opus' });
-            socket.emit('putarlagu', blob);
+            socket.emit('putarlagu_voiceNote', blob);
         };
 
         // Start recording
@@ -586,7 +588,7 @@ function voiceNote(time=3000) {
     });
 }
 
-socket.on('putarlagu', function(arrayBuffer) {
+socket.on('putarlagu_voiceNote', function(arrayBuffer) {
     var blob = new Blob([arrayBuffer], { 'type' : 'audio/ogg; codecs=opus' });
     var audio = document.createElement('audio');
     audio.src = window.URL.createObjectURL(blob);
