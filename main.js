@@ -1,5 +1,5 @@
 const storage = window.localStorage;
-const socket = io('https://socket.yuk.party');
+const socket = io('https://socket.putarlagu.co.in');
 //const socket = io('localhost:3000');
 const sessionName = 'putarlagu_session';
 const TYPING_TIMER_LENGTH = 400; // ms
