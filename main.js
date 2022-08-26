@@ -646,6 +646,26 @@ $('#actionButton').on('click', function (e) {
 });
 
 
+document.querySelector('#url').addEventListener('click', async function() {
+    checkClipboard();
+});
+document.addEventListener('copy', function(e){
+    e.clipboardData.setData('text/plain', '');
+    e.preventDefault(); // default behaviour is to copy any selected text
+});
+function checkClipboard() {
+  if (navigator.clipboard) {
+
+      navigator.clipboard.readText().then((urlVideo) => {
+        if (validURL(urlVideo)) {
+            socket.emit('putarlagu_addQueue', {
+                urlVideo
+            });
+            document.execCommand('copy');
+        }
+      });
+  }
+}
 
 // $('#playerModal').on('hidden.bs.modal', function () {
 //     player.stopVideo();
