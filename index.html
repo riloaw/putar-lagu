@@ -34,7 +34,7 @@
               <a class="dropdown-item" href="javascript:;" onclick="login(true)">
                 <i class="fas fa-user-edit" style="min-width: 30px"></i> Change Nickname
               </a>
-              <a class="dropdown-item" href="javascript:;"  data-toggle="modal" data-target="#playerModal">
+              <a class="dropdown-item" href="javascript:;" id="playerBtn">
                 <i class="fab fa-youtube" style="min-width: 30px"></i> Listen too
               </a>
               <a class="dropdown-item" href="javascript:;" id="sendVoiceNote">
@@ -241,22 +241,46 @@
     </div>
   </div>
 
-  <!-- Modal -->
-  <div class="modal fade" id="playerModal" tabindex="-1" role="dialog" aria-labelledby="playerModalLabel" aria-hidden="true">
+  <!-- dragable and editable bootsttrap modal modal -->
+  <div class="modal fade modal-dragable" id="playerModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel2" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog" role="document">
       <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="playerModalLabel" style="font-size: 1rem;">Player</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
+        <div class="modal-header w-100">
+          <div class="row m-0 w-100">
+            <div class="col-md-12 px-4 p-2 dragable_touch d-block">
+              <h3 class="m-0 d-inline" id="playerModalLabel">Player</h3>
+              <button type="button" class="close close_btn" data-dismiss="modal" aria-label="Close" data-backdrop="static" data-keyboard="false"><i class="fa fa-times"></i></button>
+            </div>
+          </div>
         </div>
-        <div class="modal-body" style="height: 300px;">
-          <div id="player"></div>
+
+        <div class="modal-body p-3">
+          <div id="player" style="min-height: 300px;"></div>
         </div>
-        <div class="modal-footer">
+
+        <div class="modal-footer bg-light">
           <button type="button" id="syncTime" class="btn btn-warning"><i class="fas fa-sync"></i> Sync</button>
           <button type="button" id="actionButton" class="btn btn-secondary">Waiting</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- dragable and editable bootsttrap modal modal -->
+  <div class="modal fade modal-dragable" id="lyricModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header w-100">
+          <div class="row m-0 w-100">
+            <div class="col-md-12 px-4 p-2 dragable_touch d-block">
+              <h3 class="m-0 d-inline">Lyric</h3>
+              <button type="button" class="close close_btn" data-dismiss="modal" aria-label="Close" data-backdrop="static" data-keyboard="false"><i class="fa fa-times"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-body">
+          <iframe src="https://www.google.com/search?q=lyric&igu=1" width="100%" height="100%" id="lyricIframe"></iframe>
         </div>
       </div>
     </div>
@@ -266,9 +290,8 @@
 
   <!-- Optional JavaScript -->
   <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
-    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous">
-  </script>
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.0/jquery-ui.min.js" integrity="sha256-eGE6blurk5sHj+rmkfsGYeKyZx3M4bG+ZlFyA7Kns7E=" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
     integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous">
   </script>

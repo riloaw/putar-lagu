@@ -329,7 +329,27 @@ function goToLyric() {
       .replace(regex2, '')
       .replace(regex3, '')
       .replace(/[^a-zA-Z0-9 ]/g, '');
-    window.open(`https://www.google.com/search?q=lyric ${q}`, '_blank').focus();
+    $('#lyricIframe').attr('src', `https://www.google.com/search?q=lyric ${q}&igu=1`);
+    $('#lyricModal').modal({
+        backdrop: false,
+        show: true
+    });
+    // reset modal if it isn't visible
+    if (!($('#lyricModal .modal.in').length)) {
+        $('#lyricModal .modal-dialog').css({
+            top: 20,
+            left: 100
+        });
+        $('#lyricModal .modal-content').css({
+            width: '70vw',
+            height: '90vh'
+        });
+    }
+
+    $('#lyricModal .modal-dialog').draggable({
+        cursor:"move",
+        handle: ".dragable_touch"
+    });
 }
 
 function restartServer() {
@@ -684,3 +704,21 @@ function checkClipboard() {
 //     player.stopVideo();
 //     listenToo = false;
 // });
+$('#playerBtn').click(function() {
+    $('#playerModal').modal({
+        backdrop: false,
+        show: true
+    });
+    // reset modal if it isn't visible
+    if (!($('#playerModal .modal.in').length)) {
+        $('#playerModal .modal-dialog').css({
+            top: 20,
+            left: 100
+        });
+    }
+
+    $('#playerModal .modal-dialog').draggable({
+        cursor:"move",
+        handle: ".dragable_touch"
+    });
+});
