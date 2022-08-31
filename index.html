@@ -68,8 +68,10 @@
                 <span>{{currentPlaying.author}}</span>
                 <hr class="mx-0 my-1" />
                 <div class="text-sm text-info">
-                  <button v-if="queueList.length > 0" onclick="skip()" class="btn btn-sm btn-danger mr-3"
-                    style="font-size: .8rem; padding: 0 1rem;">Skip</button>
+                  <button v-if="queueList.length > 0" onclick="skip()" class="btn btn-sm btn-danger mr-1"
+                    style="font-size: .8rem; padding: 0 .8rem;">Skip</button>
+                  <button onclick="goToLyric()" class="btn btn-sm btn-success mr-3"
+                    style="font-size: .8rem; padding: 0 .8rem;">Lyric</button>
                   <small>
                     <i class="text-info fas fa-user-plus"></i>
                     {{currentPlaying.addedBy}}
@@ -279,7 +281,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
   <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
   <script src="https://unpkg.com/vue-emoji-picker/dist/vue-emoji-picker.js"></script>
-  <script src="main.js?v=1.0.6"></script>
+  <script src="main.js?v=1.0.7"></script>
 </body>
 
 </html>

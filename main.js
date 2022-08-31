@@ -319,6 +319,19 @@ function skip() {
     }
 }
 
+function goToLyric() {
+    const title = app.currentPlaying.title;
+    const regex1 = /\(.*\)/i;
+    const regex2 = /\[.*\]/i;
+    const regex3 = /\#.*/i;
+    const q = title
+      .replace(regex1, '')
+      .replace(regex2, '')
+      .replace(regex3, '')
+      .replace(/[^a-zA-Z0-9 ]/g, '');
+    window.open(`https://www.google.com/search?q=lyric ${q}`, '_blank').focus();
+}
+
 function restartServer() {
     swal({
             title: "Are you sure?",
