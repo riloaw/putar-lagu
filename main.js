@@ -991,42 +991,46 @@ $('#speechBtn').click(function () {
     recognition.start();
 });
 
-var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition
-var SpeechGrammarList = SpeechGrammarList || window.webkitSpeechGrammarList
-var SpeechRecognitionEvent = SpeechRecognitionEvent || webkitSpeechRecognitionEvent
-
-var recognition = new SpeechRecognition();
-var grammarList = ["rizal ganteng"];
-if (SpeechGrammarList) {
-    // SpeechGrammarList is not currently available in Safari, and does not have any effect in any other browser.
-    // This code is provided as a demonstration of possible capability. You may choose not to use it.
-    var speechRecognitionList = new SpeechGrammarList();
-    var grammar = '#JSGF V1.0; grammar colors; public <grammarList> = ' + grammarList.join(' | ') + ' ;'
-    speechRecognitionList.addFromString(grammar, 1);
-    recognition.grammars = speechRecognitionList;
-}
-recognition.continuous = false;
-recognition.lang = 'id-ID';
-recognition.interimResults = false;
-recognition.maxAlternatives = 1;
-recognition.onresult = function (event) {
-    var res = event.results[0][0].transcript;
-    if (res.length > 3) {
-        app.query = res;
+try {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    var SpeechGrammarList = SpeechGrammarList || window.webkitSpeechGrammarList
+    var SpeechRecognitionEvent = SpeechRecognitionEvent || window.webkitSpeechRecognitionEvent
+    
+    var recognition = new SpeechRecognition();
+    var grammarList = ["rizal ganteng"];
+    if (SpeechGrammarList) {
+        // SpeechGrammarList is not currently available in Safari, and does not have any effect in any other browser.
+        // This code is provided as a demonstration of possible capability. You may choose not to use it.
+        var speechRecognitionList = new SpeechGrammarList();
+        var grammar = '#JSGF V1.0; grammar colors; public <grammarList> = ' + grammarList.join(' | ') + ' ;'
+        speechRecognitionList.addFromString(grammar, 1);
+        recognition.grammars = speechRecognitionList;
     }
-}
-
-recognition.onspeechend = function () {
-    $('#speechBtn').html('<i class="fa fa-microphone"></i>');
-    recognition.stop();
-}
-
-recognition.onnomatch = function (event) {
-    $('#speechBtn').html('<i class="fa fa-microphone"></i>');
-    showNotification("I didn't recognise that color.");
-}
-
-recognition.onerror = function (event) {
-    $('#speechBtn').html('<i class="fa fa-microphone"></i>');
-    showNotification('Error occurred in recognition: ' + event.error);
+    recognition.continuous = false;
+    recognition.lang = 'id-ID';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = function (event) {
+        var res = event.results[0][0].transcript;
+        if (res.length > 3) {
+            app.query = res;
+        }
+    }
+    
+    recognition.onspeechend = function () {
+        $('#speechBtn').html('<i class="fa fa-microphone"></i>');
+        recognition.stop();
+    }
+    
+    recognition.onnomatch = function (event) {
+        $('#speechBtn').html('<i class="fa fa-microphone"></i>');
+        showNotification("I didn't recognise that color.");
+    }
+    
+    recognition.onerror = function (event) {
+        $('#speechBtn').html('<i class="fa fa-microphone"></i>');
+        showNotification('Error occurred in recognition: ' + event.error);
+    }
+} catch (error) {
+    $('#speechBtn').hide();
 }
