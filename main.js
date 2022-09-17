@@ -6,6 +6,27 @@ const TYPING_TIMER_LENGTH = 400; // ms
 let typing = false;
 let lastTypingTime;
 Vue.use(EmojiPicker);
+
+var sum = function (arr) {
+    return arr.reduce(function (acc, x) { return acc + x; }, 0);
+};
+var makeTokens = function (text) {
+    if (text === null) { return []; }
+    if (text.length === 0) { return []; }
+    return text.toLowerCase().replace(
+        /[~`’!@#$%^&*(){}\[\];:"'<,.>?\/\\|_+=-]/g
+        , ''
+    ).split(' ').filter(function (token) { return token.length > 0; });
+};
+var makeTfVector = function (countVector) {
+    let total = sum(countVector);
+    return countVector.map(
+        function (count) {
+            return total === 0 ? 0 : count / total;
+        }
+    );
+};
+
 var app = new Vue({
     el: '#app',
     data: {
@@ -24,11 +45,31 @@ var app = new Vue({
         chatList: [],
         typings: [],
         chatInput: '',
-        searchEmoji: ''
+        searchEmoji: '',
+        docs: [],
+        query: null
     },
     watch: {
         chatInput: function (val) {
             updateTyping();
+        },
+        historyList: function (val) {
+            if (this.docs.length === 0) {
+                this.docs = val;
+            }
+        },
+        bm25RankedDocs: function (val) {
+            if (this.query != '' && this.query != null && val && val.length > 0) {
+                if (val[0].score > 0) {
+                    const song = this.historyList.find((d) => d.idVideo === val[0].idVideo);
+                    if (song) {
+                        showNotification("Added " + song.title);
+                        addQueueByData(song);
+                    }
+                } else {
+                    showNotification(this.query + " not found");
+                }
+            }
         }
     },
     mounted() {
@@ -36,6 +77,24 @@ var app = new Vue({
         this.mode = window.localStorage.getItem('putarlagu_mode');
     },
     methods: {
+        rankScoredDocs: function (scores) {
+            return scores
+                .map(
+                    function (score, index) {
+                        let doc = this.docs[index];
+                        doc.index = index;
+                        return [score, doc];
+                    }.bind(this)
+                )
+                .sort(function (a, b) { return -a[0] + b[0]; }).map(
+                    function (elem) {
+                        const el = elem[1];
+                        el.score = elem[0];
+                        return el;
+                    }
+                )
+                .slice(0, 1);
+        },
         addQueueVue(queue) {
             this.historyList = this.historyList.filter(function (el) {
                 return el.idVideo != queue.idVideo;
@@ -107,6 +166,210 @@ var app = new Vue({
         insertEmoji(emoji) {
             this.chatInput += emoji
         },
+    },
+    computed: {
+        parsedDocs: function () {
+            return this.docs.map(
+                function (doc) {
+                    return {
+                        tokens: makeTokens(doc.title)
+                        , id: doc.idVideo
+                    };
+                }
+            );
+        },
+        tokens: function () {
+            return this.parsedDocs.map(
+                function (parsedDoc) { return parsedDoc.tokens || []; }
+            );
+        },
+        dictionary: function () {
+            return this.tokens.reduce(
+                function (acc, tokens) {
+                    return acc.concat(tokens);
+                }
+                , []
+            ).reduce(
+                function (acc, word) {
+                    if (acc.indexOf(word) === -1) {
+                        acc.push(word);
+                        return acc;
+                    } else {
+                        return acc;
+                    }
+                }
+                , []
+            ).sort();
+        },
+        numberOfDocs: function () {
+            return this.countVectors.reduce(
+                function (acc, x, index) {
+                    return acc + (this.countVectors[index].length === 0 ? 0 : 1);
+                }.bind(this)
+                , 0
+            );
+        },
+        countVectors: function () {
+            return this.tokens.map(
+                function (tokens) {
+                    return this.dictionary.map(
+                        function (word) {
+                            return tokens.reduce(
+                                function (acc, token) { return token === word ? acc + 1 : acc; }
+                                , 0
+                            );
+                        }
+                    );
+                }.bind(this)
+            );
+        },
+        countVectorsT: function () {
+            let arr = [];
+            this.countVectors.map(
+                function (countVector, row, countVectors) {
+                    countVector.map(
+                        function (count, col, countVector) {
+                            if (row === 0) { arr.push([]); }
+                            arr[col].push(count);
+                        }
+                    );
+                }
+            );
+            return arr;
+        },
+        tfVectors: function () {
+            return this.countVectors.map(
+                function (countVector) {
+                    return makeTfVector(countVector);
+                }
+            );
+        },
+        idfVectors: function () {
+            let total = this.numberOfDocs;
+            if (total === 0) { return this.countVectors.map(function () { return []; }); }
+            let idfVector = this.countVectors[0].map(
+                function (count, col) {
+                    let inDocCount = this.countVectorsT[col].reduce(
+                        function (acc, x) {
+                            return acc + (x > 0 ? 1 : 0);
+                        }
+                        , 0
+                    );
+                    if (total === 0) { return 0; }
+                    if (inDocCount === 0) { return 0; }
+                    return Math.log(total / inDocCount);
+                }.bind(this)
+            );
+            return this.countVectors.map(function () { return idfVector; });
+        },
+        tfIdfVectors: function () {
+            return this.tfVectors.map(
+                function (tfVector, row) {
+                    return tfVector.map(
+                        function (tf, col) {
+                            return tf * this.idfVectors[row][col];
+                        }.bind(this)
+                    );
+                }.bind(this)
+            );
+        },
+        docsVectors: function () {
+            return this.countVectors.map(
+                function (countVector, index) {
+                    return [countVector, this.tfVectors[index], this.idfVectors[index], this.tfIdfVectors[index]];
+                }.bind(this)
+            );
+        },
+        queryTokens: function () {
+            if (!this.query) {
+                return [];
+            }
+            return makeTokens(this.query);
+        },
+        queryCountVector: function () {
+            return this.dictionary.map(
+                function (word) {
+                    return this.queryTokens.reduce(
+                        function (acc, token) { return token === word ? acc + 1 : acc; }
+                        , 0
+                    );
+                }.bind(this)
+            );
+        },
+        queryTfVector: function () {
+            return makeTfVector(this.queryCountVector);
+        }, queryIdfVector: function () {
+            return this.idfVectors[0];
+        },
+        queryTfIdfVector: function () {
+            return this.queryTfVector.map(
+                function (tf, index) {
+                    return tf * this.queryIdfVector[index];
+                }.bind(this)
+            );
+        },
+        bm25Scores: function () {
+            let meanDocLen = 0;
+            if (this.numberOfDocs > 0) {
+                meanDocLen = sum(
+                    this.countVectors.map(
+                        function (countVector) {
+                            return sum(countVector);
+                        }
+                    )
+                ) / this.numberOfDocs;
+            }
+            let k1 = 1.2;
+            let k2 = 100;
+            let b = 0.75;
+            return this.countVectors.map(
+                function (countVector) {
+                    return this.queryTokens.reduce(
+                        function (acc, queryToken) {
+                            let dictionaryIndex = this.dictionary.indexOf(queryToken);
+
+                            let K = meanDocLen === 0 ? 0 : k1 * ((1 - b) + (b * (sum(countVector) / meanDocLen)));
+
+                            let r = 0;
+                            let R = 0;
+
+                            let qf = dictionaryIndex < 0 ? 0 : this.queryCountVector[dictionaryIndex];
+                            let n = 0;
+                            if (dictionaryIndex >= 0) {
+                                n = this.countVectorsT[dictionaryIndex].reduce(
+                                    function (acc, x) { return acc + (x > 0 ? 1 : 0); }
+                                    , 0
+                                );
+                            }
+                            let N = this.numberOfDocs;
+                            let f = dictionaryIndex < 0 ? 0 : countVector[dictionaryIndex];
+
+                            let ai = r + 0.5;
+                            let bi = R - r + 0.5;
+                            let ci = n - r + 0.5;
+                            let di = N - n - R + r + 0.5;
+                            let ei = bi === 0 ? 0 : ai / bi;
+                            let fi = di === 0 ? 0 : ci / di;
+                            let gi = fi === 0 ? 0 : ei / fi;
+
+                            let hi = (k1 + 1) * f;
+                            let ii = K + f;
+                            let ji = ii === 0 ? 0 : hi / ii;
+
+                            let ki = (k2 + 1) * qf;
+                            let li = k2 + qf;
+                            let mi = li === 0 ? 0 : ki / li;
+
+                            return acc + (Math.log(gi) * ji * mi);
+                        }.bind(this)
+                        , 0
+                    );
+                }.bind(this)
+            );
+        },
+        bm25RankedDocs: function () {
+            return this.rankScoredDocs(this.bm25Scores);
+        }
     },
     directives: {
         focus: {
@@ -325,10 +588,10 @@ function goToLyric() {
     const regex2 = /\[.*\]/i;
     const regex3 = /\#.*/i;
     const q = title
-      .replace(regex1, '')
-      .replace(regex2, '')
-      .replace(regex3, '')
-      .replace(/[^a-zA-Z0-9 ]/g, '');
+        .replace(regex1, '')
+        .replace(regex2, '')
+        .replace(regex3, '')
+        .replace(/[^a-zA-Z0-9 ]/g, '');
     $('#lyricIframe').attr('src', `https://www.google.com/search?q=lyric ${q}&igu=1`);
     $('#lyricModal').modal({
         backdrop: false,
@@ -347,19 +610,19 @@ function goToLyric() {
     }
 
     $('#lyricModal .modal-dialog').draggable({
-        cursor:"move",
+        cursor: "move",
         handle: ".dragable_touch"
     });
 }
 
 function restartServer() {
     swal({
-            title: "Are you sure?",
-            text: "The song playing will start all over again",
-            icon: "warning",
-            buttons: true,
-            dangerMode: true,
-        })
+        title: "Are you sure?",
+        text: "The song playing will start all over again",
+        icon: "warning",
+        buttons: true,
+        dangerMode: true,
+    })
         .then((confirm) => {
             if (confirm) {
                 stop();
@@ -596,18 +859,18 @@ function onYouTubeIframeAPIReady() {
     }
 }
 
-function voiceNote(time=3000) {
+function voiceNote(time = 3000) {
     var constraints = { audio: true };
-    navigator.mediaDevices.getUserMedia(constraints).then(function(mediaStream) {
+    navigator.mediaDevices.getUserMedia(constraints).then(function (mediaStream) {
         var mediaRecorder = new MediaRecorder(mediaStream);
-        mediaRecorder.onstart = function(e) {
+        mediaRecorder.onstart = function (e) {
             this.chunks = [];
         };
-        mediaRecorder.ondataavailable = function(e) {
+        mediaRecorder.ondataavailable = function (e) {
             this.chunks.push(e.data);
         };
-        mediaRecorder.onstop = function(e) {
-            var blob = new Blob(this.chunks, { 'type' : 'audio/ogg; codecs=opus' });
+        mediaRecorder.onstop = function (e) {
+            var blob = new Blob(this.chunks, { 'type': 'audio/ogg; codecs=opus' });
             socket.emit('putarlagu_voiceNote', blob);
         };
 
@@ -615,14 +878,14 @@ function voiceNote(time=3000) {
         mediaRecorder.start();
 
         // Stop recording after 5 seconds and broadcast it to server
-        setTimeout(function() {
+        setTimeout(function () {
             mediaRecorder.stop()
         }, time);
     });
 }
 
-socket.on('putarlagu_voiceNote', function(arrayBuffer) {
-    var blob = new Blob([arrayBuffer], { 'type' : 'audio/ogg; codecs=opus' });
+socket.on('putarlagu_voiceNote', function (arrayBuffer) {
+    var blob = new Blob([arrayBuffer], { 'type': 'audio/ogg; codecs=opus' });
     var audio = document.createElement('audio');
     audio.src = window.URL.createObjectURL(blob);
     audio.play();
@@ -651,7 +914,7 @@ $('#playerModal').on('shown.bs.modal', function () {
     } else {
         listenTooFunc();
     }
-   
+
 });
 
 $('#sendVoiceNote').on('click', function (e) {
@@ -679,32 +942,32 @@ $('#actionButton').on('click', function (e) {
 });
 
 
-document.querySelector('#url').addEventListener('click', async function() {
+document.querySelector('#url').addEventListener('click', async function () {
     checkClipboard();
 });
-document.addEventListener('copy', function(e){
+document.addEventListener('copy', function (e) {
     e.clipboardData.setData('text/plain', '');
     e.preventDefault(); // default behaviour is to copy any selected text
 });
 function checkClipboard() {
-  if (navigator.clipboard) {
+    if (navigator.clipboard) {
 
-      navigator.clipboard.readText().then((urlVideo) => {
-        if (validURL(urlVideo)) {
-            socket.emit('putarlagu_addQueue', {
-                urlVideo
-            });
-            document.execCommand('copy');
-        }
-      });
-  }
+        navigator.clipboard.readText().then((urlVideo) => {
+            if (validURL(urlVideo)) {
+                socket.emit('putarlagu_addQueue', {
+                    urlVideo
+                });
+                document.execCommand('copy');
+            }
+        });
+    }
 }
 
 // $('#playerModal').on('hidden.bs.modal', function () {
 //     player.stopVideo();
 //     listenToo = false;
 // });
-$('#playerBtn').click(function() {
+$('#playerBtn').click(function () {
     $('#playerModal').modal({
         backdrop: false,
         show: true
@@ -718,7 +981,52 @@ $('#playerBtn').click(function() {
     }
 
     $('#playerModal .modal-dialog').draggable({
-        cursor:"move",
+        cursor: "move",
         handle: ".dragable_touch"
     });
 });
+
+$('#speechBtn').click(function () {
+    $('#speechBtn').html('<i class="fa fa-spinner fa-spin"></i>');
+    recognition.start();
+});
+
+var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition
+var SpeechGrammarList = SpeechGrammarList || window.webkitSpeechGrammarList
+var SpeechRecognitionEvent = SpeechRecognitionEvent || webkitSpeechRecognitionEvent
+
+var recognition = new SpeechRecognition();
+var grammarList = ["rizal ganteng"];
+if (SpeechGrammarList) {
+    // SpeechGrammarList is not currently available in Safari, and does not have any effect in any other browser.
+    // This code is provided as a demonstration of possible capability. You may choose not to use it.
+    var speechRecognitionList = new SpeechGrammarList();
+    var grammar = '#JSGF V1.0; grammar colors; public <grammarList> = ' + grammarList.join(' | ') + ' ;'
+    speechRecognitionList.addFromString(grammar, 1);
+    recognition.grammars = speechRecognitionList;
+}
+recognition.continuous = false;
+recognition.lang = 'id-ID';
+recognition.interimResults = false;
+recognition.maxAlternatives = 1;
+recognition.onresult = function (event) {
+    var res = event.results[0][0].transcript;
+    if (res.length > 3) {
+        app.query = res;
+    }
+}
+
+recognition.onspeechend = function () {
+    $('#speechBtn').html('<i class="fa fa-microphone"></i>');
+    recognition.stop();
+}
+
+recognition.onnomatch = function (event) {
+    $('#speechBtn').html('<i class="fa fa-microphone"></i>');
+    showNotification("I didn't recognise that color.");
+}
+
+recognition.onerror = function (event) {
+    $('#speechBtn').html('<i class="fa fa-microphone"></i>');
+    showNotification('Error occurred in recognition: ' + event.error);
+}
