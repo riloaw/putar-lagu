@@ -96,7 +96,11 @@
             <div v-if="searchResults.length > 0 && onFocus" class="search-list">
               <div v-for="search in searchResults" :key="search.id" class="d-flex flex-row mb-1 search-result"
                 v-on:click="addQueueSearch(search)">
-                <img :src="search.snippet.thumbnails.default.url" width="100" class="meta-video-thumb mr-2" />
+                <clazy-load :src="search.snippet.thumbnails.default.url">
+                  <img :src="search.snippet.thumbnails.default.url" width="100" class="meta-video-thumb mr-2" />
+                  <div style="min-height: 70px; min-width: 100px; background: #eee;" slot="placeholder">
+                  </div>
+                </clazy-load>
                 <div class="meta-video-detail w-100">
                   <h3 class="title">{{ search.title }}</h3>
                   <div class="d-flex flex-row align-items-center">
@@ -152,7 +156,11 @@
           <div v-if="historyList.length > 0" class="history-list">
             <a v-for="history in historyList" :key="history.idVideo" v-on:click="addQueueVue(history);">
               <div class="d-flex align-items-start meta-video slide-inverse slide-inverse-in mb-2">
-                <img :src="history.thumbnailVideo" width="100" class="meta-video-thumb mr-2" />
+                <clazy-load :src="history.thumbnailVideo">
+                  <img :src="history.thumbnailVideo" width="100" class="meta-video-thumb mr-2" />
+                  <div style="min-height: 70px; min-width: 100px; background: #eee;" slot="placeholder">
+                  </div>
+                </clazy-load>
                 <div class="meta-video-detail w-100">
                   <h3 class="title">{{ history.title }}</h3>
                   <div class="d-flex flex-row justify-content-between align-items-center">
@@ -304,6 +312,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
   <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
   <script src="https://unpkg.com/vue-emoji-picker/dist/vue-emoji-picker.js"></script>
+  <script src="https://unpkg.com/vue-clazy-load/dist/vue-clazy-load.min.js"></script>
   <script src="main.js?v=1.0.9"></script>
 </body>
 

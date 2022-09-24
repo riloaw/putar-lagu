@@ -1,11 +1,14 @@
 const storage = window.localStorage;
-const socket = io('https://socket.putarlagu.co.in');
-//const socket = io('localhost:3000');
+const base_url = 'https://socket.putarlagu.co.in';
+// const base_url = 'http://localhost:3000';
+const apiKey = 'ajanf94n30viqpwimci034bvnwe';
+const socket = io(base_url);
 const sessionName = 'putarlagu_session';
 const TYPING_TIMER_LENGTH = 400; // ms
 let typing = false;
 let lastTypingTime;
 Vue.use(EmojiPicker);
+Vue.use(VueClazyLoad);
 
 var sum = function (arr) {
     return arr.reduce(function (acc, x) { return acc + x; }, 0);
@@ -384,7 +387,6 @@ socket.on('connect', function () {
     console.log('Connected');
     connected = true;
     getQueue();
-    getHistory();
     getCurrentPlaying();
     login();
     getUsers();
@@ -546,7 +548,10 @@ function getQueue() {
 }
 
 function getHistory() {
-    socket.emit('putarlagu_historyList', {});
+    // socket.emit('putarlagu_historyList', {});
+    fetch(base_url + '/api/putarlagu/history-list', {headers:{'X-API-KEY': apiKey}} )
+        .then((response) => response.json())
+        .then((data) => app.historyList = data);
 }
 
 function getUsers() {
