@@ -704,3 +704,10 @@ img.cover-video {
       left:50%;
       transform: translateX(-50%);
   }
+
+  .image-placeholder {
+    min-height: 70px;
+    min-width: 100px;
+    background: rgb(116 121 151 / 16%);
+    margin-right: 10px;
+  }
